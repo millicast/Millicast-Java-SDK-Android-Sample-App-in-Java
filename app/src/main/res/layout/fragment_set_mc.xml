@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:isScrollContainer="false"
+    android:orientation="vertical"
+    android:verticalScrollbarPosition="defaultPosition"
+    tools:context=".SetMcFragment">
+
+    <!-- TODO: Update blank fragment layout -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/millicast_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <Switch
+                android:id="@+id/switchRicohTheta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/ricoh_theta"
+                app:layout_constraintBottom_toTopOf="@+id/account_id"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/account_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/account_id"
+                app:layout_constraintBottom_toTopOf="@+id/stream_name_pub"
+                app:layout_constraintTop_toBottomOf="@+id/switchRicohTheta"
+                tools:layout_editor_absoluteX="1dp" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/stream_name_pub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/stream_name_publish"
+                app:layout_constraintBottom_toTopOf="@+id/stream_name_sub"
+                app:layout_constraintTop_toBottomOf="@+id/account_id" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/stream_name_sub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/stream_name_subscribe"
+                app:layout_constraintBottom_toTopOf="@+id/publish_token"
+                app:layout_constraintTop_toBottomOf="@+id/stream_name_pub"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/publish_token"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/publish_token"
+                app:layout_constraintBottom_toTopOf="@+id/publish_url"
+                app:layout_constraintTop_toBottomOf="@+id/stream_name_sub" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/publish_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/publish_url"
+                app:layout_constraintBottom_toTopOf="@+id/subscribe_url"
+                app:layout_constraintTop_toBottomOf="@+id/publish_token" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/subscribe_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/subscribe_url"
+                app:layout_constraintBottom_toTopOf="@id/linearLayout1"
+                app:layout_constraintTop_toBottomOf="@+id/publish_url" />
+
+            <LinearLayout
+                android:id="@+id/linearLayout1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/subscribe_url">
+
+                <LinearLayout
+                    android:id="@+id/linearLayout2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textView_load"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:text="Load values using:" />
+
+                    <Button
+                        android:id="@+id/button_applied"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Applied" />
+
+                    <Button
+                        android:id="@+id/button_saved"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Memory" />
+
+                    <Button
+                        android:id="@+id/button_file"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="File" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/linearLayout3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal|center_vertical"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textView_apply"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:text="Changes only apply after clicking:" />
+
+                    <Button
+                        android:id="@+id/button_apply"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Apply" />
+
+                    <Button
+                        android:id="@+id/button_apply_save"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Apply and save" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

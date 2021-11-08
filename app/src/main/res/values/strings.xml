@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Millicast Java SDK SA</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="startCapture">Start Capture</string>
+    <string name="tryCapture">Trying to Capture...</string>
+    <string name="stopCapture">Stop Capture</string>
+    <string name="notPublishing">Not Publishing</string>
+    <string name="startPublish">Start Publish</string>
+    <string name="tryPublish">Trying to Publish...</string>
+    <string name="stopPublish">Stop Publish</string>
+    <string name="notSubscribing">Not Subscribing</string>
+    <string name="startSubscribe">Start Subscribe</string>
+    <string name="trySubscribe">Trying to Subscribe...</string>
+    <string name="stopSubscribe">Stop Subscribe</string>
+    <string name="noAudio">No Audio</string>
+    <string name="muteAudio">Mute Audio</string>
+    <string name="unmuteAudio">Unmute Audio</string>
+    <string name="noVideo">No Video</string>
+    <string name="muteVideo">Mute Video</string>
+    <string name="unmuteVideo">Unmute Video</string>
+
+    <string name="title">Millicast Credentials</string>
+    <string name="connecting">Connecting...</string>
+    <string name="stream_name_publish">Stream name (Publish)</string>
+    <string name="account_id">Account id</string>
+    <string name="stream_name_subscribe">Stream name (Subscribe)</string>
+    <string name="publish_token">Publish token</string>
+    <string name="publish_url">publish url</string>
+    <string name="subscribe_url">subscribe url</string>
+    <string name="ricoh_theta">Ricoh Theta</string>
+</resources>
