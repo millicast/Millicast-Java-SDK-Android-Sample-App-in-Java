@@ -1,7 +1,8 @@
 package com.millicast.android_app;
 
 import com.millicast.Publisher;
-import com.millicast.StatsTree;
+
+import org.webrtc.RTCStatsReport;
 
 import java.util.Optional;
 
@@ -32,6 +33,7 @@ public class PubListener implements Publisher.Listener {
     @Override
     public void onConnected() {
         mcManager.setPubState(CONNECTED);
+        mcManager.enablePubStats(1000);
         setUI();
         makeSnackbar(logTag + "Connected", publishFragment);
         mcManager.startPublish();
@@ -45,10 +47,8 @@ public class PubListener implements Publisher.Listener {
     }
 
     @Override
-    public void onStatsReport(StatsTree statsTree) {
-        Visitor v = new Visitor();
-        statsTree.visit(v);
-        String log = "[Pub][StatsReport] " + v.toString();
+    public void onStatsReport(RTCStatsReport statsReport) {
+        String log = "[Pub][Stats][Report] " + statsReport.toString();
         logD("STATS", log);
     }
 

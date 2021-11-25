@@ -90,8 +90,6 @@ public class PublishFragment extends Fragment {
             mcManager.setCameraLock(true);
             if (mcManager.isRicohTheta(CURRENT)) {
                 mcManager.overrideBWE(40000000);
-            } else {
-                mcManager.enablePubStats(true); // Collect Publisher's rtc stats during the call
             }
         }
     }

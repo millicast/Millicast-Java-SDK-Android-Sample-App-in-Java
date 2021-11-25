@@ -1,9 +1,10 @@
 package com.millicast.android_app;
 
 import com.millicast.AudioTrack;
-import com.millicast.StatsTree;
 import com.millicast.Subscriber;
 import com.millicast.VideoTrack;
+
+import org.webrtc.RTCStatsReport;
 
 import java.util.Optional;
 
@@ -48,6 +49,7 @@ public class SubListener implements Subscriber.Listener {
     @Override
     public void onConnected() {
         mcManager.setSubState(CONNECTED);
+        mcManager.enableSubStats(1000);
         mcManager.startSubscribe();
         makeSnackbar(logTag + "Connected", subscribeFragment);
     }
@@ -60,10 +62,8 @@ public class SubListener implements Subscriber.Listener {
     }
 
     @Override
-    public void onStatsReport(StatsTree statsTree) {
-        Visitor v = new Visitor();
-        statsTree.visit(v);
-        String log = "[Sub][StatsReport] " + v.toString();
+    public void onStatsReport(RTCStatsReport statsReport) {
+        String log = "[Sub][Stats][Report] " + statsReport.toString();
         logD("STATS", log);
     }
 

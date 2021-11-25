@@ -11,6 +11,7 @@ import com.millicast.AudioSource;
 import com.millicast.AudioTrack;
 import com.millicast.Client;
 import com.millicast.LogLevel;
+import com.millicast.Logger;
 import com.millicast.Media;
 import com.millicast.Publisher;
 import com.millicast.Subscriber;
@@ -20,7 +21,7 @@ import com.millicast.VideoSource;
 import com.millicast.VideoTrack;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Optional;
 
 import static com.millicast.android_app.Constants.ACCOUNT_ID;
 import static com.millicast.android_app.Constants.ACTION_MAIN_CAMERA_CLOSE;
@@ -161,6 +162,10 @@ public class MillicastManager {
     private Publisher publisher;
     private Subscriber subscriber;
 
+    // Options objects
+    private Publisher.Option pubOptions;
+    private Client.Option subOptions;
+
     // View objects
     private SwitchHdl switchHdl;
     private VidSrcEvtHdl vidSrcEvtHdl;
@@ -195,16 +200,11 @@ public class MillicastManager {
     public void init(Context context) {
         this.context = context;
         Client.initMillicastSdk(this.context);
-        // Set Loggers
-        Publisher.setLogger((String msg, LogLevel level) -> {
-            String logTag = "[SDK][Pub][L:" + level + "] ";
+        // Set Logger
+        Logger.setLoggerListener((String msg, LogLevel level) -> {
+            String logTag = "[SDK][Log][L:" + level + "] ";
             logD(TAG, logTag + msg);
         });
-        Subscriber.setLogger((String msg, LogLevel level) -> {
-            String logTag = "[SDK][Sub][L:" + level + "] ";
-            logD(TAG, logTag + msg);
-        });
-
         // Prepare Media
         getMedia();
         // Get media indices from stored values if present, else from default values.
@@ -229,6 +229,9 @@ public class MillicastManager {
         setRicohTheta(Utils.getSaved(keyRicohTheta, false, context), false);
 
         logD(TAG, "[init] OK.");
+
+        pubOptions = new Publisher.Option();
+        subOptions = new Client.Option();
     }
 
     public String getAccountId(Source source) {
@@ -436,6 +439,7 @@ public class MillicastManager {
         audioPlaybackStart();
 
         this.subscriber.setCredentials(creds);
+        this.subscriber.setOptions(subOptions);
         this.subscriber.connect();
         Log.d(TAG, "Starting media subscribe...");
         Log.d(TAG, "Started display video.");
@@ -840,7 +844,7 @@ public class MillicastManager {
         if (isAudio) {
             logTag = "[Audio]" + logTag;
             if (audioCodecList == null) {
-                audioCodecList = new ArrayList<>(Arrays.asList("opus"));
+                audioCodecList = getMedia().getSupportedAudioCodecs();
                 log = logTag + "Getting new ones.";
             } else {
                 log = logTag + "Using existing.";
@@ -1020,6 +1024,7 @@ public class MillicastManager {
         setPubState(MillicastManager.PublisherState.CONNECTED);
 
         publisher.disconnect();
+        enablePubStats(0);
         setPubState(MillicastManager.PublisherState.DISCONNECTED);
         logD(TAG, logTag + "Disconnected from Millicast.");
 
@@ -1041,11 +1046,7 @@ public class MillicastManager {
      * @param value Set BWE to this value in bytes.
      */
     public void overrideBWE(int value) {
-        getPublisher();
-        if (publisher == null) {
-            logD(TAG, "[overrideBWE] Failed as Publisher does not exists.");
-        }
-        publisher.overrideBWE(value);
+        pubOptions.bwe = Optional.of(value);
         logD(TAG, "[overrideBWE] Overridden Publisher BWE to " + value + " bytes.");
     }
 
@@ -1111,6 +1112,7 @@ public class MillicastManager {
 
         // Disconnect Subscriber
         subscriber.disconnect();
+        enableSubStats(0);
         setSubState(SubscriberState.DISCONNECTED);
         logD(TAG, "Disconnected from Millicast.");
     }
@@ -1207,19 +1209,43 @@ public class MillicastManager {
         return name;
     }
 
-    public void enablePubStats(boolean enable) {
+    /**
+     * Enable or disable Publisher's WebRTC stats.
+     * Do NOT call before Publisher is connected to Millicast.
+     *
+     * @param enable The interval in ms between stats reports.
+     *               Set to 0 to disable stats.
+     */
+    public void enablePubStats(int enable) {
         if (publisher != null) {
-            publisher.enableStats(enable);
-            if (enable) Log.d(TAG, "Publisher stats enabled.");
-            else Log.d(TAG, "Publisher stats disabled");
+            String logTag = "[Pub][Stats][Enable] ";
+            if (enable > 0) {
+                publisher.getStats(enable);
+                logD(TAG, logTag + "YES. Interval: " + enable + "ms.");
+            } else {
+                publisher.getStats(0);
+                logD(TAG, logTag + "NO.");
+            }
         }
     }
 
-    public void enableSubStats(boolean enable) {
+    /**
+     * Enable or disable Subscriber's WebRTC stats.
+     * Do NOT call before Subscriber is connected to Millicast.
+     *
+     * @param enable The interval in ms between stats reports.
+     *               Set to 0 to disable stats.
+     */
+    public void enableSubStats(int enable) {
         if (subscriber != null) {
-            subscriber.enableStats(enable);
-            if (enable) Log.d(TAG, "Subscriber stats enabled.");
-            else Log.d(TAG, "Subscriber stats disabled");
+            String logTag = "[Sub][Stats][Enable] ";
+            if (enable > 0) {
+                subscriber.getStats(enable);
+                logD(TAG, logTag + "YES. Interval: " + enable + "ms.");
+            } else {
+                subscriber.getStats(0);
+                logD(TAG, logTag + "NO.");
+            }
         }
     }
 
@@ -1426,6 +1452,7 @@ public class MillicastManager {
         creds.token = getPublishingToken(CURRENT);
 
         publisher.setCredentials(creds);
+        publisher.setOptions(pubOptions);
 
         boolean success;
         String error = "Failed to connect to Millicast!";
@@ -1722,9 +1749,14 @@ public class MillicastManager {
         // If the selected index is larger than size, set it to maximum size.
         // This can happen when the videoSource has changed.
         if (capabilityIndex >= size) {
-            logD(TAG, logTag + "Resetting capabilityIndex as it is greater than " +
-                    "number of capabilities available" + size + "!");
+            logD(TAG, logTag + "Resetting capabilityIndex to " + (size - 1) + "as it is greater than " +
+                    "number of capabilities available (" + size + ")!");
             setCapabilityIndex(size - 1);
+            return;
+        }
+        if (capabilityIndex < 0) {
+            logD(TAG, logTag + "Resetting capabilityIndex to 0 as it was negative");
+            capabilityIndex = 0;
             return;
         }
 
@@ -1784,9 +1816,12 @@ public class MillicastManager {
         logD(TAG, logTag + "Set " + getVideoSourceStr(videoSource, false) +
                 " with Cap: " + getCapabilityStr(capability) + ".");
 
-
         videoSource.setEventsHandler(vidSrcEvtHdl);
         VideoTrack videoTrack = (VideoTrack) videoSource.startCapture();
+
+        if (videoSource.getType() == com.millicast.Source.Type.NDI) {
+            this.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
+        }
 
         setRenderPubVideoTrack(videoTrack);
     }
@@ -2056,6 +2091,7 @@ public class MillicastManager {
             return null;
         }
         publisher = Publisher.createPublisher(pubListener);
+
         logD(TAG, "[getPublisher] Created and returning a new Publisher.");
         return publisher;
     }
@@ -2124,8 +2160,8 @@ public class MillicastManager {
             if (!publisher.isPublishing()) {
                 audioCodec = ac;
                 videoCodec = vc;
-                publisher.setPreferredAudioCodec(audioCodec);
-                publisher.setPreferredVideoCodec(videoCodec);
+                pubOptions.audioCodec = Optional.of(ac);
+                pubOptions.videoCodec = Optional.of(vc);
                 log += "set on Publisher: ";
 
             } else {

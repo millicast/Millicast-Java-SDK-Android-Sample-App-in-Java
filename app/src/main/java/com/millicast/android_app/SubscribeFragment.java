@@ -69,10 +69,6 @@ public class SubscribeFragment extends Fragment {
         buttonSubscribe.setOnClickListener(this::onStartSubscribeClicked);
         buttonAudio.setOnClickListener(this::toggleAudio);
         buttonVideo.setOnClickListener(this::toggleVideo);
-
-        if (!mcManager.isRicohTheta(CURRENT)) {
-            mcManager.enableSubStats(true); // Collect Subscriber's rtc stats during the call
-        }
     }
 
     @Override
