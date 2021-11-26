@@ -21,7 +21,7 @@ import java.util.ArrayList;
  */
 public class SetMediaFragment extends Fragment {
     public static final String TAG = "SetMediaFragment";
-    private MillicastManager mcManager;
+    private final MillicastManager mcManager;
     private Spinner spinnerCapability;
 
     public SetMediaFragment() {

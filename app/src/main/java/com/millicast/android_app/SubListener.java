@@ -16,7 +16,8 @@ public class SubListener implements Subscriber.Listener {
     public static final String TAG = "SubListener";
 
     private SubscribeFragment subscribeFragment;
-    private MillicastManager mcManager;
+    private final MillicastManager mcManager;
+    private final String logTag = "[Sub][Ltn] ";
 
     public SubListener() {
         mcManager = MillicastManager.getSingleInstance();
@@ -26,45 +27,43 @@ public class SubListener implements Subscriber.Listener {
     public void onSubscribed() {
         mcManager.setSubState(SUBSCRIBING);
         setUI();
-        logD(TAG, "SUBSCRIBED");
+        makeSnackbar(logTag + "Subscribed", subscribeFragment);
     }
 
     @Override
     public void onTrack(VideoTrack videoTrack) {
-        logD(TAG, "onTrack");
-        makeSnackbar("Subscribed", subscribeFragment);
         setRenderSubVideo(videoTrack);
         setUI();
+        makeSnackbar(logTag + "Video received", subscribeFragment);
     }
 
     @Override
     public void onTrack(AudioTrack audioTrack) {
-        logD(TAG, "on audio track");
         mcManager.setSubAudioTrack(audioTrack);
         mcManager.setSubAudioEnabled(true);
         setUI();
+        makeSnackbar(logTag + "Audio received", subscribeFragment);
     }
 
     @Override
     public void onConnected() {
         mcManager.setSubState(CONNECTED);
-        logD(TAG, "onConnected");
-        makeSnackbar("Connected", subscribeFragment);
         mcManager.startSubscribe();
+        makeSnackbar(logTag + "Connected", subscribeFragment);
     }
 
     @Override
     public void onConnectionError(String reason) {
         mcManager.setSubState(MillicastManager.SubscriberState.DISCONNECTED);
         setUI();
-        makeSnackbar(reason, subscribeFragment);
+        makeSnackbar(logTag + "Connection FAILED! " + reason, subscribeFragment);
     }
 
     @Override
     public void onStatsReport(StatsTree statsTree) {
         Visitor v = new Visitor();
         statsTree.visit(v);
-        String log = "[StatsReport][Sub]" + v.toString();
+        String log = "[Sub][StatsReport] " + v.toString();
         logD("STATS", log);
     }
 

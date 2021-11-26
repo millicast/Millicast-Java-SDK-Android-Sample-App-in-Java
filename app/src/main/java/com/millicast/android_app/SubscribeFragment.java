@@ -27,7 +27,7 @@ import static com.millicast.android_app.Utils.logD;
 public class SubscribeFragment extends Fragment {
     public static final String TAG = "SubscribeFragment";
 
-    private MillicastManager mcManager;
+    private final MillicastManager mcManager;
     private FrameLayout frameLayout;
     private TextView textView;
     private Button buttonSubscribe;
@@ -117,11 +117,7 @@ public class SubscribeFragment extends Fragment {
     private void toggleAudio(View view) {
         AudioTrack track = mcManager.getSubAudioTrack();
         if (track != null) {
-            if (mcManager.isSubAudioEnabled()) {
-                track.setEnabled(false);
-            } else {
-                track.setEnabled(true);
-            }
+            track.setEnabled(!mcManager.isSubAudioEnabled());
             mcManager.setSubAudioEnabled(!mcManager.isSubAudioEnabled());
             setUI();
         }
@@ -135,11 +131,7 @@ public class SubscribeFragment extends Fragment {
     private void toggleVideo(View view) {
         VideoTrack track = mcManager.getSubVideoTrack();
         if (track != null) {
-            if (mcManager.isSubVideoEnabled()) {
-                track.setEnabled(false);
-            } else {
-                track.setEnabled(true);
-            }
+            track.setEnabled(!mcManager.isSubVideoEnabled());
             mcManager.setSubVideoEnabled(!mcManager.isSubVideoEnabled());
             setUI();
         }
@@ -182,7 +174,7 @@ public class SubscribeFragment extends Fragment {
      * @param isInCom
      */
     private void setAudioMode(boolean isInCom) {
-        AudioManager audioManager = (AudioManager) getActivity().getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) mcManager.getMainActivity().getSystemService(Context.AUDIO_SERVICE);
         int mode = MODE_IN_COMMUNICATION;
         if (!isInCom) {
             mode = MODE_NORMAL;

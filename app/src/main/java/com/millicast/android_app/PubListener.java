@@ -1,8 +1,5 @@
 package com.millicast.android_app;
 
-import android.util.Log;
-
-import com.google.android.material.snackbar.Snackbar;
 import com.millicast.Publisher;
 import com.millicast.StatsTree;
 
@@ -11,12 +8,15 @@ import java.util.Optional;
 import static com.millicast.android_app.MillicastManager.PublisherState.CONNECTED;
 import static com.millicast.android_app.MillicastManager.PublisherState.DISCONNECTED;
 import static com.millicast.android_app.MillicastManager.PublisherState.PUBLISHING;
+import static com.millicast.android_app.Utils.logD;
+import static com.millicast.android_app.Utils.makeSnackbar;
 
 public class PubListener implements Publisher.Listener {
     public static final String TAG = "PubListener";
 
     private PublishFragment publishFragment;
     private MillicastManager mcManager;
+    private String logTag = "[Pub][Ltn] ";
 
     public PubListener() {
         mcManager = MillicastManager.getSingleInstance();
@@ -26,20 +26,20 @@ public class PubListener implements Publisher.Listener {
     public void onPublishing() {
         mcManager.setPubState(PUBLISHING);
         setUI();
-        makeSnackbar("Publishing");
+        makeSnackbar(logTag + "Publishing", publishFragment);
     }
 
     @Override
     public void onConnected() {
         mcManager.setPubState(CONNECTED);
         setUI();
-        makeSnackbar("Connected");
+        makeSnackbar(logTag + "Connected", publishFragment);
         mcManager.startPublish();
     }
 
     @Override
     public void onConnectionError(String reason) {
-        makeSnackbar(reason);
+        makeSnackbar(logTag + reason, publishFragment);
         mcManager.setPubState(DISCONNECTED);
         setUI();
     }
@@ -48,8 +48,8 @@ public class PubListener implements Publisher.Listener {
     public void onStatsReport(StatsTree statsTree) {
         Visitor v = new Visitor();
         statsTree.visit(v);
-        String log = "[StatsReport][Pub]" + v.toString();
-        Log.d("STATS", log);
+        String log = "[Pub][StatsReport] " + v.toString();
+        logD("STATS", log);
     }
 
     @Override
@@ -90,15 +90,4 @@ public class PubListener implements Publisher.Listener {
         });
     }
 
-    private void makeSnackbar(String msg) {
-        if (publishFragment == null) {
-            return;
-        }
-        mcManager.getMainActivity().runOnUiThread(() -> {
-            if (publishFragment != null) {
-                Snackbar.make(publishFragment.getView(), msg, Snackbar.LENGTH_SHORT)
-                        .setAction("Action", null).show();
-            }
-        });
-    }
 }

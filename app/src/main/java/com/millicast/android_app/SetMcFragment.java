@@ -33,23 +33,22 @@ import static com.millicast.android_app.Utils.logD;
 
 public class SetMcFragment extends Fragment {
     public static final String TAG = "SetMcFragment";
-
-    private MillicastManager mcManager;
-    private Switch switchRicohTheta;
     Drawable backgroundOriginal;
+    private final MillicastManager mcManager;
+    private Switch switchRicohTheta;
     private TextInputEditText editTextAccountId;
     private TextInputEditText editTextStreamNamePub;
     private TextInputEditText editTextStreamNameSub;
     private TextInputEditText editTextPublishingToken;
     private TextInputEditText editTextPublishApiUrl;
     private TextInputEditText editTextSubscribeApiUrl;
-    private AtomicBoolean changedRicohTheta = new AtomicBoolean(false);
-    private AtomicBoolean changedAccountId = new AtomicBoolean(false);
-    private AtomicBoolean changedStreamNamePub = new AtomicBoolean(false);
-    private AtomicBoolean changedStreamNameSub = new AtomicBoolean(false);
-    private AtomicBoolean changedPublishingToken = new AtomicBoolean(false);
-    private AtomicBoolean changedPublishApiUrl = new AtomicBoolean(false);
-    private AtomicBoolean changedSubscribeApiUrl = new AtomicBoolean(false);
+    private final AtomicBoolean changedRicohTheta = new AtomicBoolean(false);
+    private final AtomicBoolean changedAccountId = new AtomicBoolean(false);
+    private final AtomicBoolean changedStreamNamePub = new AtomicBoolean(false);
+    private final AtomicBoolean changedStreamNameSub = new AtomicBoolean(false);
+    private final AtomicBoolean changedPublishingToken = new AtomicBoolean(false);
+    private final AtomicBoolean changedPublishApiUrl = new AtomicBoolean(false);
+    private final AtomicBoolean changedSubscribeApiUrl = new AtomicBoolean(false);
     private Button buttonLoadApplied;
     private Button buttonLoadSaved;
     private Button buttonLoadFile;

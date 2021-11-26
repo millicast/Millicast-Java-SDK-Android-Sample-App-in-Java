@@ -1,9 +1,7 @@
 package com.millicast.android_app;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Gravity;
@@ -264,17 +262,24 @@ public class Utils {
     }
 
     public static void makeSnackbar(String msg, Fragment fragment) {
-        if (fragment == null) {
-            return;
-        }
         MillicastManager.getSingleInstance().getMainActivity().runOnUiThread(() -> {
-            if (fragment != null) {
-                Snackbar snackbar = Snackbar.make(fragment.getView(), msg, Snackbar.LENGTH_SHORT);
+            logD(PubListener.TAG, msg);
+            if (fragment == null) {
+                logD(TAG, "[Utils][Snackbar] Failed! Fragment not available. " +
+                        "Only logging: " + msg);
+                return;
+            }
+            View view = fragment.getView();
+            if (view != null && view.getParent() != null) {
+                Snackbar snackbar = Snackbar.make(view, msg, Snackbar.LENGTH_SHORT);
                 TextView tv = snackbar.getView().findViewById(com.google.android.material.R.id.snackbar_text);
                 tv.setGravity(Gravity.CENTER_HORIZONTAL);
                 tv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                 tv.setMaxLines(10);
-                snackbar.show();
+                snackbar.setAction("Action", null).show();
+            } else {
+                logD(TAG, "[Utils][Snackbar] Failed! View or parent not available. " +
+                        "Only logging: " + msg);
             }
         });
     }
@@ -285,4 +290,5 @@ public class Utils {
         }
         return sharedPreferences;
     }
+
 }

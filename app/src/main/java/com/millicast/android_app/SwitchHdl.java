@@ -1,7 +1,5 @@
 package com.millicast.android_app;
 
-import android.util.Log;
-
 import com.millicast.VideoSource;
 
 import static com.millicast.android_app.Utils.logD;

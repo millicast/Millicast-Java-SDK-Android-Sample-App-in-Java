@@ -24,7 +24,7 @@ import static com.millicast.android_app.Utils.logD;
 public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
-    private MillicastManager mcManager;
+    private final MillicastManager mcManager;
     private FrameLayout frameLayout;
     private TextView textView;
     private Switch switchDirection;
@@ -214,11 +214,7 @@ public class PublishFragment extends Fragment {
     private void toggleAudio(View view) {
         AudioTrack track = mcManager.getPubAudioTrack();
         if (track != null) {
-            if (mcManager.isPubAudioEnabled()) {
-                track.setEnabled(false);
-            } else {
-                track.setEnabled(true);
-            }
+            track.setEnabled(!mcManager.isPubAudioEnabled());
             mcManager.setPubAudioEnabled(!mcManager.isPubAudioEnabled());
             setUI();
         }
@@ -232,11 +228,7 @@ public class PublishFragment extends Fragment {
     private void toggleVideo(View view) {
         VideoTrack track = mcManager.getPubVideoTrack();
         if (track != null) {
-            if (mcManager.isPubVideoEnabled()) {
-                track.setEnabled(false);
-            } else {
-                track.setEnabled(true);
-            }
+            track.setEnabled(!mcManager.isPubVideoEnabled());
             mcManager.setPubVideoEnabled(!mcManager.isPubVideoEnabled());
             setUI();
         }

@@ -5,7 +5,7 @@ import com.millicast.StatsNode;
 import com.millicast.StatsTree;
 
 class Visitor implements StatsTree.Visitor {
-    private StringBuilder stringBuilder;
+    private final StringBuilder stringBuilder;
 
     public Visitor() {
         this.stringBuilder = new StringBuilder();

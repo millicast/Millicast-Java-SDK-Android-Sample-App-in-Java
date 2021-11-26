@@ -1,18 +1,19 @@
 package com.millicast.android_app;
 
-import android.app.Activity;
 import android.os.Handler;
-import android.util.Log;
 
 import com.millicast.VideoSource;
 
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.Utils.logD;
+import static com.millicast.android_app.Utils.makeSnackbar;
 
 class VidSrcEvtHdl implements VideoSource.EventsHandler {
     public static final String TAG = "VidSrcEvtHdl";
 
     private PublishFragment publishFragment;
     private MillicastManager mcManager;
+    private String logTag = "[Video][EvtHdl] ";
 
     public VidSrcEvtHdl() {
         mcManager = MillicastManager.getSingleInstance();
@@ -20,22 +21,22 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
 
     @Override
     public void onCameraError(String s) {
-        Log.d(TAG, "OnCameraError : " + s);
+        logD(TAG, "OnCameraError : " + s);
     }
 
     @Override
     public void onCameraDisconnected() {
-        Log.d(TAG, "OnCameraDisconnected : ");
+        logD(TAG, "OnCameraDisconnected : ");
     }
 
     @Override
     public void onCameraFreezed(String s) {
-        Log.d(TAG, "OnCameraFreezed : " + s);
+        logD(TAG, "OnCameraFreezed : " + s);
     }
 
     @Override
     public void onCameraOpening(String s) {
-        Log.d(TAG, "OnCameraOpening : " + s);
+        makeSnackbar(logTag + "Camera opening... " + s, publishFragment);
         final boolean[] paramPreviewSet = new boolean[1];
         Handler handler = new Handler();
         final double[] delaySec = {0};
@@ -51,11 +52,12 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
                     mcManager = MillicastManager.getSingleInstance();
                     // If this is a camera switch, current state would already be IS_CAPTURED.
                     // Do not change states in this case.
-                    if(MillicastManager.CaptureState.IS_CAPTURED != mcManager.getCapState()) {
+                    if (MillicastManager.CaptureState.IS_CAPTURED != mcManager.getCapState()) {
                         mcManager.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
                     }
                     setButtons();
-                    Log.d("onCameraOpening", "Set camera params success at " + delaySec[0] + " s.");
+                    makeSnackbar(logTag + "RT Camera opening... Set camera params success at " +
+                            delaySec[0] + " s.", publishFragment);
                 }
             }
         };
@@ -68,7 +70,7 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
         } else {
             // If this is a camera switch, current state would already be IS_CAPTURED.
             // Do not change states in this case.
-            if(MillicastManager.CaptureState.IS_CAPTURED != mcManager.getCapState()) {
+            if (MillicastManager.CaptureState.IS_CAPTURED != mcManager.getCapState()) {
                 mcManager.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
             }
             setButtons();
@@ -77,17 +79,17 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
 
     @Override
     public void onCameraOpened() {
-        Log.d(TAG, "OnCameraOpened");
+        makeSnackbar(logTag + "Camera opened", publishFragment);
     }
 
     @Override
     public void onFirstFrameAvailable() {
-        Log.d(TAG, "OnFirstFrameAvailable");
+        makeSnackbar(logTag + "First Frame available", publishFragment);
     }
 
     @Override
     public void onCameraClosed() {
-        Log.d(TAG, "OnCameraClosed");
+        makeSnackbar(logTag + "Camera closed", publishFragment);
     }
 
     public void setPublishFragment(PublishFragment publishFragment) {
