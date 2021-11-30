@@ -1497,14 +1497,23 @@ public class MillicastManager {
             logD(TAG, logTag + "Failed as no valid audioSource was available!");
             return;
         }
-
         int size = audioSourceList.size();
+        if (size < 1) {
+            logD(TAG, logTag + "Failed as list size was " + size + "!");
+            return;
+        }
+
         // If the selected index is larger than size, set it to maximum size.
         // This might happen if the list of audioSources changed.
         if (audioSourceIndex >= size) {
-            logD(TAG, logTag + "Resetting audioSourceIndex as " +
-                    "it is greater than number of audioSources available" + size + "!");
+            logD(TAG, logTag + "Resetting index to " + (size - 1) + "as it is greater than " +
+                    "size of list (" + size + ")!");
             setAudioSourceIndex(size - 1);
+            return;
+        }
+        if (audioSourceIndex < 0) {
+            logD(TAG, logTag + "Resetting index to 0 as it was negative!");
+            setAudioSourceIndex(0);
             return;
         }
 
@@ -1630,12 +1639,22 @@ public class MillicastManager {
         }
 
         int size = videoSourceList.size();
+        if (size < 1) {
+            logD(TAG, logTag + "Failed as list size was " + size + "!");
+            return;
+        }
+
         // If the selected index is larger than size, set it to maximum size.
         // This might happen if the list of videoSources changed.
         if (videoSourceIndex >= size) {
-            logD(TAG, logTag + "Resetting videoSourceIndex as " +
-                    "it is greater than number of videoSources available" + size + "!");
+            logD(TAG, logTag + "Resetting index to " + (size - 1) + "as it is greater than " +
+                    "size of list (" + size + ")!");
             setVideoSourceIndex(size - 1, true);
+            return;
+        }
+        if (videoSourceIndex < 0) {
+            logD(TAG, logTag + "Resetting index to 0 as it was negative!");
+            setVideoSourceIndex(0, true);
             return;
         }
 
@@ -1741,22 +1760,26 @@ public class MillicastManager {
     private void setCapability() {
         String logTag = "[Capability][Set] ";
         if (capabilityList == null) {
-            logD(TAG, "[Capability] Failed as no valid capability was available!");
+            logD(TAG, logTag + "Failed as no list was available!");
             return;
         }
         int size = capabilityList.size();
+        if (size < 1) {
+            logD(TAG, logTag + "Failed as list size was " + size + "!");
+            return;
+        }
 
         // If the selected index is larger than size, set it to maximum size.
         // This can happen when the videoSource has changed.
         if (capabilityIndex >= size) {
-            logD(TAG, logTag + "Resetting capabilityIndex to " + (size - 1) + "as it is greater than " +
-                    "number of capabilities available (" + size + ")!");
+            logD(TAG, logTag + "Resetting index to " + (size - 1) + "as it is greater than " +
+                    "size of list (" + size + ")!");
             setCapabilityIndex(size - 1);
             return;
         }
         if (capabilityIndex < 0) {
-            logD(TAG, logTag + "Resetting capabilityIndex to 0 as it was negative");
-            capabilityIndex = 0;
+            logD(TAG, logTag + "Resetting index to 0 as it was negative!");
+            setCapabilityIndex(0);
             return;
         }
 
@@ -1894,6 +1917,7 @@ public class MillicastManager {
             logD(TAG, "[setRenderPubVideoTrack] videoTrack is null, so not rendering it...");
             return;
         }
+
         setPubVideoEnabled(true);
         logD(TAG, "[setRenderPubVideoTrack] Set videoTrack, trying to render it...");
         renderPubVideo();
@@ -2117,36 +2141,49 @@ public class MillicastManager {
      */
     private void setCodecs() {
         String logTag = "[Codec][Set] ";
-        String ac = "None";
-        String vc = "None";
+        final String none = "None";
+        String ac = none;
+        String vc = none;
 
         getCodecList(true);
         getCodecList(false);
 
         logD(TAG, logTag + "Selecting a new one based on selected index.");
 
-        if (audioCodecList == null) {
+        if (audioCodecList == null || audioCodecList.size() < 1) {
             logD(TAG, logTag + "Failed to set audio codec as none was available!");
         } else {
             int size = audioCodecList.size();
 
             // If the selected index is larger than size, set it to maximum size.
             if (audioCodecIndex >= size) {
-                logD(TAG, logTag + "Resetting audioCodecIndex as it is greater than number of codecs available" + size + "!");
+                logD(TAG, logTag + "Resetting audioCodecIndex to " + (size - 1) + "as it is greater than " +
+                        "size of list (" + size + ")!");
                 setCodecIndex(size - 1, true);
+            }
+            if (audioCodecIndex < 0) {
+                logD(TAG, logTag + "Resetting audioCodecIndex to 0 as it was negative!");
+                setCodecIndex(0, true);
+                return;
             }
             ac = audioCodecList.get(audioCodecIndex);
         }
 
-        if (videoCodecList == null) {
+        if (videoCodecList == null || videoCodecList.size() < 1) {
             logD(TAG, logTag + "Failed to set video codec as none was available!");
         } else {
             int size = videoCodecList.size();
 
             // If the selected index is larger than size, set it to maximum size.
             if (videoCodecIndex >= size) {
-                logD(TAG, logTag + "Resetting videoCodecIndex as it is greater than number of codecs available" + size + "!");
+                logD(TAG, logTag + "Resetting videoCodecIndex to " + (size - 1) + "as it is greater than " +
+                        "size of list (" + size + ")!");
                 setCodecIndex(size - 1, false);
+            }
+            if (videoCodecIndex < 0) {
+                logD(TAG, logTag + "Resetting videoCodecIndex to 0 as it was negative!");
+                setCodecIndex(0, false);
+                return;
             }
             vc = videoCodecList.get(videoCodecIndex);
         }
@@ -2155,14 +2192,23 @@ public class MillicastManager {
         logD(TAG, logTag + "Selected at index:" + audioCodecIndex + "/" + videoCodecIndex +
                 " is: " + ac + "/" + vc + ".");
 
-        String log = logTag + "OK. New ";
+        String log = logTag + "OK. ";
         if (publisher != null) {
             if (!publisher.isPublishing()) {
-                audioCodec = ac;
-                videoCodec = vc;
-                pubOptions.audioCodec = Optional.of(ac);
-                pubOptions.videoCodec = Optional.of(vc);
-                log += "set on Publisher: ";
+                if (!none.equals(ac)) {
+                    audioCodec = ac;
+                    pubOptions.audioCodec = Optional.of(ac);
+                    log += "Set Audio:" + audioCodec + " on Publisher. ";
+                } else {
+                    log += "Audio NOT set on Publisher.";
+                }
+                if (!none.equals(vc)) {
+                    videoCodec = vc;
+                    pubOptions.videoCodec = Optional.of(vc);
+                    log += "Set Video:" + videoCodec + " on Publisher.";
+                } else {
+                    log += "Video NOT set on Publisher.";
+                }
 
             } else {
                 log += "NOT set, as publishing is ongoing: ";
@@ -2172,7 +2218,6 @@ public class MillicastManager {
             audioCodec = ac;
             videoCodec = vc;
         }
-        log += "Audio:" + audioCodec + " Video:" + videoCodec;
         logD(TAG, log);
     }
 
@@ -2244,14 +2289,23 @@ public class MillicastManager {
             logD(TAG, logTag + "Failed as no valid audioPlayback was available!");
             return;
         }
-
         int size = audioPlaybackList.size();
+        if (size < 1) {
+            logD(TAG, logTag + "Failed as list size was " + size + "!");
+            return;
+        }
+
         // If the selected index is larger than size, set it to maximum size.
         // This might happen if the list of audioPlaybacks changed.
         if (audioPlaybackIndex >= size) {
-            logD(TAG, logTag + "Resetting audioPlaybackIndex as " +
-                    "it is greater than number of audioPlaybacks available" + size + "!");
+            logD(TAG, logTag + "Resetting index to " + (size - 1) + "as it is greater than " +
+                    "size of list (" + size + ")!");
             setAudioPlaybackIndex(size - 1);
+            return;
+        }
+        if (audioPlaybackIndex < 0) {
+            logD(TAG, logTag + "Resetting index to 0 as it was negative!");
+            setAudioPlaybackIndex(0);
             return;
         }
 
