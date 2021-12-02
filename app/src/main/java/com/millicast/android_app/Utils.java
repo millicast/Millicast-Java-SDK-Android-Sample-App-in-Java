@@ -8,12 +8,16 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewParent;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.millicast.VideoRenderer;
+
+import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 public class Utils {
 
@@ -50,7 +54,7 @@ public class Utils {
      * @param frameLayout The layout that might contain video.
      * @param tag
      */
-    public static void stopDisplayVideo(FrameLayout frameLayout, String tag) {
+    public static void stopDisplayVideo(LinearLayout frameLayout, String tag) {
         if (frameLayout != null) {
             frameLayout.removeAllViews();
             Log.d(tag, "[stopDisplayVideo] Removed video display.");
@@ -263,7 +267,7 @@ public class Utils {
 
     public static void makeSnackbar(String msg, Fragment fragment) {
         MillicastManager.getSingleInstance().getMainActivity().runOnUiThread(() -> {
-            logD(PubListener.TAG, msg);
+            logD(TAG, msg);
             if (fragment == null) {
                 logD(TAG, "[Utils][Snackbar] Failed! Fragment not available. " +
                         "Only logging: " + msg);
@@ -272,7 +276,12 @@ public class Utils {
             View view = fragment.getView();
             if (view != null && view.getParent() != null) {
                 Snackbar snackbar = Snackbar.make(view, msg, Snackbar.LENGTH_SHORT);
-                TextView tv = snackbar.getView().findViewById(com.google.android.material.R.id.snackbar_text);
+                View snackbarView = snackbar.getView();
+                CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) snackbarView.getLayoutParams();
+                params.gravity = Gravity.CENTER;
+                params.width = WRAP_CONTENT;
+                snackbarView.setLayoutParams(params);
+                TextView tv = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
                 tv.setGravity(Gravity.CENTER_HORIZONTAL);
                 tv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                 tv.setMaxLines(10);
@@ -291,4 +300,38 @@ public class Utils {
         return sharedPreferences;
     }
 
+    /**
+     * Given a list of specified size and the current index, gets the next index.
+     * If at end of list, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param size      Size of the list.
+     * @param now       Current index of the list.
+     * @param ascending If true, cycle in the direction of increasing index,
+     *                  otherwise cycle in opposite direction.
+     * @param logTag
+     * @return
+     */
+    public static Integer indexNext(int size, int now, boolean ascending, String logTag) {
+        Integer next;
+        if (ascending) {
+            if (now >= (size - 1)) {
+                next = 0;
+                logD(TAG, logTag + next + " (Cycling back to start)");
+            } else {
+                next = now + 1;
+                logD(TAG, logTag + next + " Incrementing index.");
+            }
+        } else {
+            if (now <= 0) {
+                next = size - 1;
+                logD(TAG, logTag + next + " (Cycling back to end)");
+            } else {
+                next = now - 1;
+                logD(TAG, logTag + next + " Decrementing index.");
+            }
+        }
+        logD(TAG, logTag + "Next: " + next + " Now: " + now);
+        return next;
+    }
 }

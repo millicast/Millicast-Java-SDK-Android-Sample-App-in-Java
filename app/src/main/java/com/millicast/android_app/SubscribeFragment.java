@@ -9,7 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -19,17 +20,21 @@ import com.millicast.AudioTrack;
 import com.millicast.VideoRenderer;
 import com.millicast.VideoTrack;
 
+import org.webrtc.RendererCommon;
+
 import static android.media.AudioManager.MODE_IN_COMMUNICATION;
 import static android.media.AudioManager.MODE_NORMAL;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.Utils.logD;
+import static com.millicast.android_app.Utils.makeSnackbar;
 
 public class SubscribeFragment extends Fragment {
     public static final String TAG = "SubscribeFragment";
 
     private final MillicastManager mcManager;
-    private FrameLayout frameLayout;
+    private LinearLayout linearLayout;
     private TextView textView;
+    private Switch switchDirection;
     private Button buttonSubscribe;
     private Button buttonAudio;
     private Button buttonVideo;
@@ -58,12 +63,18 @@ public class SubscribeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        frameLayout = view.findViewById(R.id.frame_layout_sub);
+        linearLayout = view.findViewById(R.id.linear_layout_sub_1_0);
         textView = view.findViewById(R.id.text_view_sub);
 
+        switchDirection = view.findViewById(R.id.switchDirectionSub);
         buttonSubscribe = view.findViewById(R.id.button_subscribe);
         buttonAudio = view.findViewById(R.id.button_audio_sub);
         buttonVideo = view.findViewById(R.id.button_video_sub);
+
+        // Set static button actions
+        linearLayout.setOnClickListener(this::toggleScale);
+        switchDirection.setOnCheckedChangeListener(this::toggleAscend);
+        switchDirection.setChecked(ascending);
 
         // Set dynamic button actions
         buttonSubscribe.setOnClickListener(this::onStartSubscribeClicked);
@@ -81,7 +92,7 @@ public class SubscribeFragment extends Fragment {
     @Override
     public void onPause() {
         setAudioMode(false);
-        Utils.stopDisplayVideo(frameLayout, TAG);
+        Utils.stopDisplayVideo(linearLayout, TAG);
         super.onPause();
     }
 
@@ -133,6 +144,29 @@ public class SubscribeFragment extends Fragment {
         }
     }
 
+    /**
+     * Set the ScalingType of the current videoRenderer to the next one in the list of
+     * {@link RendererCommon.ScalingType}.
+     * If at end of range of ScalingType, cycle to start of the other end.
+     *
+     * @param view
+     */
+    private void toggleScale(View view) {
+        String logTag = "[Scale][Toggle][Sub] ";
+        String log = logTag;
+        if (linearLayout != null) {
+            RendererCommon.ScalingType type = mcManager.switchScaling(ascending, false);
+            if (type != null) {
+                log += "Switched to " + type + ".";
+            } else {
+                log += "Failed! SDK could not switch.";
+            }
+        } else {
+            log += "Failed! linearLayout not available!";
+        }
+        makeSnackbar(log, this);
+    }
+
     private void onStartSubscribeClicked(View view) {
         Log.d(TAG, "Start Subscribe clicked.");
         displaySubVideo();
@@ -144,13 +178,13 @@ public class SubscribeFragment extends Fragment {
         String tag = "[displaySubVideo] ";
 
         // Display video if not already displayed.
-        if (frameLayout.getChildCount() == 0) {
+        if (linearLayout.getChildCount() == 0) {
             // Get remote video renderer.
             VideoRenderer subRenderer = mcManager.getSubRenderer();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(subRenderer, TAG);
             // Finally, add our renderer to our frame layout.
-            frameLayout.addView(subRenderer);
+            linearLayout.addView(subRenderer);
             logD(TAG, tag + "Added renderer for display.");
         } else {
             logD(TAG, tag + "Already displaying renderer.");
@@ -160,7 +194,7 @@ public class SubscribeFragment extends Fragment {
     private void onStopSubscribeClicked(View view) {
         Log.d(TAG, "Stop Subscribe clicked.");
         mcManager.stopSubscribe();
-        Utils.stopDisplayVideo(frameLayout, TAG);
+        Utils.stopDisplayVideo(linearLayout, TAG);
         setUI();
     }
 

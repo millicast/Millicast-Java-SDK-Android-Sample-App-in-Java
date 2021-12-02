@@ -7,7 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -18,14 +18,17 @@ import com.millicast.AudioTrack;
 import com.millicast.VideoRenderer;
 import com.millicast.VideoTrack;
 
+import org.webrtc.RendererCommon;
+
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.Utils.logD;
+import static com.millicast.android_app.Utils.makeSnackbar;
 
 public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
     private final MillicastManager mcManager;
-    private FrameLayout frameLayout;
+    private LinearLayout linearLayout;
     private TextView textView;
     private Switch switchDirection;
     private Button buttonCamera;
@@ -62,7 +65,7 @@ public class PublishFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        frameLayout = view.findViewById(R.id.frame_layout_pub);
+        linearLayout = view.findViewById(R.id.linear_layout_pub_1_0);
         textView = view.findViewById(R.id.textViewPub);
 
         switchDirection = view.findViewById(R.id.switchDirectionPub);
@@ -76,6 +79,7 @@ public class PublishFragment extends Fragment {
         buttonVideo = view.findViewById(R.id.button_video_pub);
 
         // Set static button actions
+        linearLayout.setOnClickListener(this::toggleScale);
         switchDirection.setOnCheckedChangeListener(this::toggleAscend);
         switchDirection.setChecked(ascending);
         buttonCamera.setOnClickListener(this::toggleCamera);
@@ -103,7 +107,7 @@ public class PublishFragment extends Fragment {
 
     @Override
     public void onPause() {
-        Utils.stopDisplayVideo(frameLayout, TAG);
+        Utils.stopDisplayVideo(linearLayout, TAG);
         super.onPause();
     }
 
@@ -130,12 +134,12 @@ public class PublishFragment extends Fragment {
     private void displayPubVideo() {
         String tag = "[displayPubVideo] ";
         // Display video if not already displayed.
-        if (frameLayout.getChildCount() == 0) {
+        if (linearLayout.getChildCount() == 0) {
             VideoRenderer pubRenderer = mcManager.getPubRenderer();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(pubRenderer, TAG);
             // Finally, add our renderer to our frame layout.
-            frameLayout.addView(pubRenderer);
+            linearLayout.addView(pubRenderer);
             logD(TAG, tag + "Added renderer for display.");
         } else {
             logD(TAG, tag + "Already displaying renderer.");
@@ -146,7 +150,7 @@ public class PublishFragment extends Fragment {
         Log.d(TAG, "Stop Capture clicked.");
         mcManager.stopAudioVideoCapture();
         Log.d(TAG, "Stopped media capture.");
-        Utils.stopDisplayVideo(frameLayout, TAG);
+        Utils.stopDisplayVideo(linearLayout, TAG);
         setUI();
     }
 
@@ -232,6 +236,29 @@ public class PublishFragment extends Fragment {
         }
     }
 
+    /**
+     * Set the ScalingType of the current videoRenderer to the next one in the list of
+     * {@link RendererCommon.ScalingType}.
+     * If at end of range of ScalingType, cycle to start of the other end.
+     *
+     * @param view
+     */
+    private void toggleScale(View view) {
+        String logTag = "[Scale][Toggle][Pub] ";
+        String log = logTag;
+        if (linearLayout != null) {
+            RendererCommon.ScalingType type = mcManager.switchScaling(ascending, true);
+            if (type != null) {
+                log += "Switched to " + type + ".";
+            } else {
+                log += "Failed! SDK could not switch.";
+            }
+        } else {
+            log += "Failed! linearLayout not available!";
+        }
+        makeSnackbar(log, this);
+    }
+
     private void onStartPublishClicked(View view) {
         Log.d(TAG, "Start Publish clicked.");
         mcManager.pubConnect();
@@ -261,7 +288,7 @@ public class PublishFragment extends Fragment {
         }
 
         textView.setText("Token: " + mcManager.getPublishingToken(CURRENT) +
-                " Stream: " + mcManager.getStreamNamePub(CURRENT));
+                "\nStream: " + mcManager.getStreamNamePub(CURRENT));
         buttonCamera.setText(mcManager.getVideoSourceName());
         buttonResolution.setText(mcManager.getCapabilityName());
         buttonAudioCodec.setText(mcManager.getCodecName(true));

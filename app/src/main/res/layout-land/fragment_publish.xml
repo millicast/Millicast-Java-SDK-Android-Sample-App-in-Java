@@ -11,40 +11,62 @@
         android:id="@+id/linear_layout_pub_0"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         app:layout_constraintHorizontal_bias="0.0">
 
         <LinearLayout
-            android:id="@+id/linear_layout_pub_1_0"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:id="@+id/linear_layout_pub_1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="0.75"
-            android:orientation="horizontal">
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/linear_layout_pub_1_0"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.85"
+                android:orientation="vertical">
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/linear_layout_pub_1_1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.15"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/textViewPub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.85"
+                    android:autoSizeTextType="uniform"
+                    android:text="Token: Stream: "
+                    android:textIsSelectable="true" />
+
+                <Switch
+                    android:id="@+id/switchDirectionPub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:autoSizeTextType="uniform"
+                    android:text="->"
+                    android:textAlignment="center" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/linear_layout_pub_2"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="0.25"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            app:layout_constraintHorizontal_bias="0.0">
 
-            <TextView
-                android:id="@+id/textViewPub"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeTextType="uniform"
-                android:text="Token: Stream: "
-                android:textIsSelectable="true" />
-
-            <Switch
-                android:id="@+id/switchDirectionPub"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeTextType="uniform"
-                android:text="->"
-                android:textAlignment="center" />
 
             <LinearLayout
                 android:id="@+id/linearLayout1"
@@ -52,36 +74,36 @@
                 android:layout_height="0dp"
                 android:layout_gravity="bottom"
                 android:layout_weight="0.5"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
                 <Button
                     android:id="@+id/buttonCodecAudio"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Audio Codec" />
 
                 <Button
                     android:id="@+id/buttonCamera"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Camera" />
 
                 <Button
                     android:id="@+id/buttonCapture"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/startCapture" />
 
                 <Button
                     android:id="@+id/button_audio_pub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteAudio" />
@@ -94,36 +116,36 @@
                 android:layout_height="0dp"
                 android:layout_gravity="bottom"
                 android:layout_weight="0.5"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
                 <Button
                     android:id="@+id/buttonCodecVideo"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Video Codec" />
 
                 <Button
                     android:id="@+id/buttonResolution"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Res" />
 
                 <Button
                     android:id="@+id/buttonPublish"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/startPublish" />
 
                 <Button
                     android:id="@+id/button_video_pub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteVideo" />

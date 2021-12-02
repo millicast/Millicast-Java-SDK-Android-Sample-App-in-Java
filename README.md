@@ -2,7 +2,7 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 
 # Millicast SDK:
 - To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/tags).
-- The recommended SDK version for this SA version is: [1.0.0](https://github.com/millicast/millicast-native-sdk/releases/tag/v1.0.0)
+- The recommended SDK version for this SA version is: [1.1.0](https://github.com/millicast/millicast-native-sdk/releases/tag/v1.0.0)
 
 # Build the SA
 1. Open the SA in Android Studio (AS).
@@ -53,3 +53,6 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 1. To mute/unmute audio or video, toggle the respective buttons.
     - This affects only the subscribed media on this Subscriber, and not on other Subscriber(s) or the Publisher.
 1. To stop subscribing, click "STOP SUBSCRIBE".
+
+# Miscellaneous
+1. To adjust the video rendering scaling, tap on the rendered video to cycle between different scaling.

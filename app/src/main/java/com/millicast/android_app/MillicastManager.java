@@ -20,6 +20,8 @@ import com.millicast.VideoRenderer;
 import com.millicast.VideoSource;
 import com.millicast.VideoTrack;
 
+import org.webrtc.RendererCommon.ScalingType;
+
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -34,6 +36,7 @@ import static com.millicast.android_app.Constants.SUBSCRIBE_TOKEN;
 import static com.millicast.android_app.Constants.SUBSCRIBE_URL;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.Utils.logD;
+import static org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT;
 
 public class MillicastManager {
     public static final String TAG = "MCM";
@@ -77,7 +80,7 @@ public class MillicastManager {
     }
 
     /**
-     * The source of a value to read from or to write to.
+     * The source of a setting value to read from or to write to.
      */
     public enum Source {
         /**
@@ -158,6 +161,8 @@ public class MillicastManager {
     private VideoTrack subVideoTrack;
     private VideoRenderer pubRenderer;
     private VideoRenderer subRenderer;
+    private ScalingType pubScaling = SCALE_ASPECT_FIT;
+    private ScalingType subScaling = SCALE_ASPECT_FIT;
 
     private Publisher publisher;
     private Subscriber subscriber;
@@ -511,10 +516,24 @@ public class MillicastManager {
      * Render
      */
 
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
+     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
+     * to have a natural feel when looking at the local Publisher view.
+     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
+     *
+     * @return {@link VideoRenderer}
+     */
     public VideoRenderer getPubRenderer() {
         // If it's not available, create it with application context.
         if (pubRenderer == null) {
             pubRenderer = new VideoRenderer(context);
+            pubRenderer.setScalingType(pubScaling);
+            pubRenderer.setMirror(true);
+
             logD(TAG, "[getPubRenderer] Created renderer with application context.");
         } else {
             logD(TAG, "[getPubRenderer] Using existing renderer.");
@@ -522,15 +541,24 @@ public class MillicastManager {
         return pubRenderer;
     }
 
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
+     * The scaling effect is not transmitted to the Publisher.
+     *
+     * @return {@link VideoRenderer}
+     */
     public VideoRenderer getSubRenderer() {
         // If it's not available, create it with application context.
         if (subRenderer == null) {
             subRenderer = new VideoRenderer(context);
+            subRenderer.setScalingType(subScaling);
             logD(TAG, "[getSubRenderer] Created renderer with application context.");
         } else {
             logD(TAG, "[getSubRenderer] Using existing renderer.");
         }
-
         return subRenderer;
     }
 
@@ -594,9 +622,8 @@ public class MillicastManager {
         this.subVideoEnabled = subVideoEnabled;
     }
 
-
     /**
-     * Select/Switch videoSource, capability and codec.
+     * Select/Switch videoSource, capability, rendering and codec.
      */
 
 
@@ -829,6 +856,54 @@ public class MillicastManager {
         logD(TAG, "[Capability][Switch] OK. VideoSource: " +
                 getVideoSourceName() +
                 " Capability: " + getCapabilityStr(capability) + ".");
+    }
+
+    /**
+     * Set the {@link ScalingType} of the specified videoRenderer to the next type.
+     * If at end of range of ScalingType, cycle to start of the other end.
+     * The types of scaling in use are:
+     * {@link ScalingType#SCALE_ASPECT_FIT} - video frame is scaled to fit the size of the view by
+     * maintaining the aspect ratio (black borders may be displayed).
+     * {@link ScalingType#SCALE_ASPECT_FILL} - video frame is scaled to fill the size of the view by
+     * maintaining the aspect ratio. Some portion of the video frame may be
+     * clipped.
+     * {@link ScalingType#SCALE_ASPECT_BALANCED} - Compromise between FIT and FILL. Video frame will fill as much as
+     * possible of the view while maintaining aspect ratio, under the constraint that at least
+     * ~0.5625 of the frame content will be shown.
+     *
+     * @param ascending If true, "next" ScalingType is defined in the direction of increasing index,
+     *                  otherwise it is in the opposite direction.
+     * @param forPub
+     * @return
+     */
+    public ScalingType switchScaling(boolean ascending, boolean forPub) {
+        String logTag = "[Scale][Switch] ";
+        String rendererStr = "subRenderer";
+        VideoRenderer renderer = subRenderer;
+        ScalingType scaling = subScaling;
+        if (forPub) {
+            rendererStr = "pubRenderer";
+            renderer = pubRenderer;
+            scaling = pubScaling;
+        }
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The " + rendererStr + " is not available.");
+            return null;
+        }
+
+        int now = scaling.ordinal();
+        int size = ScalingType.values().length;
+        int next = Utils.indexNext(size, now, ascending, logTag);
+        ScalingType nextScaling = ScalingType.values()[next];
+        logD(TAG, logTag + "Next for " + rendererStr + ": " + nextScaling + ".");
+
+        renderer.setScalingType(nextScaling);
+        if (forPub) {
+            pubScaling = nextScaling;
+        } else {
+            subScaling = nextScaling;
+        }
+        return nextScaling;
     }
 
     /**
@@ -1975,26 +2050,8 @@ public class MillicastManager {
             logD(TAG, logTag + "Failed as the device does not have a camera!");
             return null;
         }
-        Integer next;
         int now = videoSourceIndex;
-        if (ascending) {
-            if (now >= (size - 1)) {
-                next = 0;
-                logD(TAG, logTag + next + " (Cycling back to start)");
-            } else {
-                next = now + 1;
-                logD(TAG, logTag + next + " Incrementing index.");
-            }
-        } else {
-            if (now <= 0) {
-                next = size - 1;
-                logD(TAG, logTag + next + " (Cycling back to end)");
-            } else {
-                next = now - 1;
-                logD(TAG, logTag + next + " Decrementing index.");
-            }
-        }
-        return next;
+        return Utils.indexNext(size, now, ascending, logTag);
     }
 
     /**
@@ -2018,26 +2075,8 @@ public class MillicastManager {
             return null;
         }
 
-        Integer next;
         int now = capabilityIndex;
-        if (ascending) {
-            if (now >= (size - 1)) {
-                next = 0;
-                logD(TAG, logTag + next + " (Cycling back to start)");
-            } else {
-                next = now + 1;
-                logD(TAG, logTag + next + " Incrementing index.");
-            }
-        } else {
-            if (now <= 0) {
-                next = size - 1;
-                logD(TAG, logTag + next + " (Cycling back to end)");
-            } else {
-                next = now - 1;
-                logD(TAG, logTag + next + " Decrementing index.");
-            }
-        }
-        return next;
+        return Utils.indexNext(size, now, ascending, logTag);
     }
 
     /**
@@ -2070,27 +2109,7 @@ public class MillicastManager {
             return null;
         }
 
-        Integer next;
-        if (ascending) {
-            if (now >= (size - 1)) {
-                next = 0;
-                logD(TAG, logTag + next + " (Cycling back to start)");
-            } else {
-                next = now + 1;
-                logD(TAG, logTag + next + " Incrementing index.");
-            }
-        } else {
-            if (now <= 0) {
-                next = size - 1;
-                logD(TAG, logTag + next + " (Cycling back to end)");
-            } else {
-                next = now - 1;
-                logD(TAG, logTag + next + " Decrementing index.");
-            }
-        }
-        logD(TAG, logTag + "Next: " + next +
-                " Now: " + now);
-        return next;
+        return Utils.indexNext(size, now, ascending, logTag);
     }
 
     /**

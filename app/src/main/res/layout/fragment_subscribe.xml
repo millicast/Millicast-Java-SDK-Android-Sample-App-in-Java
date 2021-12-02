@@ -6,82 +6,85 @@
     android:layout_height="match_parent"
     tools:context=".SubscribeFragment">
 
-    <FrameLayout
-        android:id="@+id/frame_layout_sub"
+    <LinearLayout
+        android:id="@+id/linear_layout_sub_0"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/text_view_sub"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    </FrameLayout>
+        <LinearLayout
+            android:id="@+id/linear_layout_sub_1_0"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.75"
+            android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/text_view_sub"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Account: Stream: "
-        android:textIsSelectable="true"
-        app:layout_constraintBottom_toTopOf="@id/button_audio_sub"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/frame_layout_sub" />
+        </LinearLayout>
 
-    <Button
-        android:id="@+id/button_audio_sub"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/muteAudio"
-        app:layout_constraintBottom_toTopOf="@id/button_subscribe"
-        app:layout_constraintEnd_toStartOf="@+id/button_video_sub"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent" />
+        <LinearLayout
+            android:id="@+id/linear_layout_sub_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintHorizontal_bias="0.0">
 
-    <Button
-        android:id="@+id/button_video_sub"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/muteVideo"
-        app:layout_constraintBottom_toTopOf="@id/button_subscribe"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/button_audio_sub" />
+            <TextView
+                android:id="@+id/text_view_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autoSizeTextType="uniform"
+                android:text="Account: Stream: "
+                android:textIsSelectable="true" />
 
-<!--
-    <Switch
-        android:id="@+id/switchDirectionSub"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="0.25"
-        android:autoSizeTextType="uniform"
-        android:text="->"
-        android:textAlignment="center"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/button_codec_sub"
-        />
+            <LinearLayout
+                android:id="@+id/linear_layout_sub_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:orientation="horizontal">
 
+                <Switch
+                    android:id="@+id/switchDirectionSub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.2"
+                    android:autoSizeTextType="uniform"
+                    android:text="->"
+                    android:textAlignment="center" />
 
-    <Button
-        android:id="@+id/button_codec_sub"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Codec"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/button_subscribe"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent" />
--->
+                <Button
+                    android:id="@+id/button_audio_sub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.4"
+                    android:autoSizeTextType="uniform"
+                    android:text="@string/muteAudio" />
 
-    <Button
-        android:id="@+id/button_subscribe"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/startSubscribe"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent" />
+                <Button
+                    android:id="@+id/button_video_sub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.4"
+                    android:autoSizeTextType="uniform"
+                    android:text="@string/muteVideo" />
 
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/linear_layout_sub_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_subscribe"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:autoSizeTextType="uniform"
+                    android:text="@string/startSubscribe" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
