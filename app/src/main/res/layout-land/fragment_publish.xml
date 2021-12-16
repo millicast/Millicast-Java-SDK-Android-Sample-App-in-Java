@@ -15,98 +15,81 @@
         app:layout_constraintHorizontal_bias="0.0">
 
         <LinearLayout
-            android:id="@+id/linear_layout_pub_1"
+            android:id="@+id/linear_layout_video_pub"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.75"
+            android:layout_weight="0.5"
             android:orientation="vertical">
-
-            <LinearLayout
-                android:id="@+id/linear_layout_pub_1_0"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.85"
-                android:orientation="vertical">
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/linear_layout_pub_1_1"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.15"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/textViewPub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.85"
-                    android:autoSizeTextType="uniform"
-                    android:text="Token: Stream: "
-                    android:textIsSelectable="true" />
-
-                <Switch
-                    android:id="@+id/switchDirectionPub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.15"
-                    android:autoSizeTextType="uniform"
-                    android:text="->"
-                    android:textAlignment="center" />
-
-            </LinearLayout>
 
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/linear_layout_pub_2"
+            android:id="@+id/linear_layout_con_pub"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
-            android:orientation="vertical"
-            app:layout_constraintHorizontal_bias="0.0">
+            android:layout_weight="0.5"
+            android:orientation="vertical">
 
+            <TextView
+                android:id="@+id/textViewPub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autoSizeTextType="uniform"
+                android:text="Token: Stream: "
+                android:textIsSelectable="true" />
 
             <LinearLayout
                 android:id="@+id/linearLayout1"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_gravity="bottom"
-                android:layout_weight="0.5"
-                android:orientation="vertical">
+                android:layout_weight="3"
+                android:orientation="horizontal">
 
                 <Button
-                    android:id="@+id/buttonCodecAudio"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/button_refresh_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="Audio Codec" />
+                    android:text="Refresh" />
 
                 <Button
-                    android:id="@+id/buttonCamera"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/button_audio_src"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:text="Audio" />
+
+                <Button
+                    android:id="@+id/button_video_src"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
                     android:text="Camera" />
 
                 <Button
-                    android:id="@+id/buttonCapture"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/buttonResolution"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="@string/startCapture" />
+                    android:text="Res" />
 
                 <Button
-                    android:id="@+id/button_audio_pub"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/buttonCapture"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="@string/muteAudio" />
+                    android:text="@string/startCapture" />
 
             </LinearLayout>
 
@@ -114,44 +97,94 @@
                 android:id="@+id/linearLayout2"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_gravity="bottom"
-                android:layout_weight="0.5"
-                android:orientation="vertical">
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:orientation="horizontal">
 
                 <Button
-                    android:id="@+id/buttonCodecVideo"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/button_mirror"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="Video Codec" />
+                    android:text="Mirror" />
 
                 <Button
-                    android:id="@+id/buttonResolution"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/button_scale"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="Res" />
+                    android:text="Scale" />
 
                 <Button
-                    android:id="@+id/buttonPublish"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:id="@+id/button_audio_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
-                    android:text="@string/startPublish" />
+                    android:text="@string/muteAudio" />
 
                 <Button
                     android:id="@+id/button_video_pub"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:layout_gravity="center"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteVideo" />
 
             </LinearLayout>
+            <LinearLayout
+                android:id="@+id/linearLayout3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_gravity="bottom"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <Switch
+                    android:id="@+id/switchDirectionPub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:autoSizeTextType="uniform"
+                    android:layout_gravity="center"
+                    android:text="->"
+                    android:textAlignment="center" />
+
+                <Button
+                    android:id="@+id/buttonCodecAudio"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:text="Audio Codec" />
+
+                <Button
+                    android:id="@+id/buttonCodecVideo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:text="Video Codec" />
+
+                <Button
+                    android:id="@+id/buttonPublish"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:text="@string/startPublish" />
+
+            </LinearLayout>
         </LinearLayout>
+
     </LinearLayout>
 
 

@@ -28,14 +28,14 @@ public class SubListener implements Subscriber.Listener {
     public void onSubscribed() {
         mcManager.setSubState(SUBSCRIBING);
         setUI();
-        makeSnackbar(logTag + "Subscribed", subscribeFragment);
+        makeSnackbar(logTag, "Subscribed", subscribeFragment);
     }
 
     @Override
     public void onTrack(VideoTrack videoTrack) {
         setRenderSubVideo(videoTrack);
         setUI();
-        makeSnackbar(logTag + "Video received", subscribeFragment);
+        makeSnackbar(logTag, "Video received", subscribeFragment);
     }
 
     @Override
@@ -43,7 +43,7 @@ public class SubListener implements Subscriber.Listener {
         mcManager.setSubAudioTrack(audioTrack);
         mcManager.setSubAudioEnabled(true);
         setUI();
-        makeSnackbar(logTag + "Audio received", subscribeFragment);
+        makeSnackbar(logTag, "Audio received", subscribeFragment);
     }
 
     @Override
@@ -51,14 +51,14 @@ public class SubListener implements Subscriber.Listener {
         mcManager.setSubState(CONNECTED);
         mcManager.enableSubStats(1000);
         mcManager.startSubscribe();
-        makeSnackbar(logTag + "Connected", subscribeFragment);
+        makeSnackbar(logTag, "Connected", subscribeFragment);
     }
 
     @Override
     public void onConnectionError(String reason) {
         mcManager.setSubState(MillicastManager.SubscriberState.DISCONNECTED);
         setUI();
-        makeSnackbar(logTag + "Connection FAILED! " + reason, subscribeFragment);
+        makeSnackbar(logTag, "Connection FAILED! " + reason, subscribeFragment);
     }
 
     @Override
@@ -92,9 +92,6 @@ public class SubListener implements Subscriber.Listener {
     }
 
     private void setRenderSubVideo(VideoTrack videoTrack) {
-        if (subscribeFragment == null) {
-            return;
-        }
         mcManager.getMainActivity().runOnUiThread(() -> {
             mcManager.setRenderSubVideoTrack(videoTrack);
         });

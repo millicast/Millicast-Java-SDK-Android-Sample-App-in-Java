@@ -15,16 +15,21 @@ import com.millicast.Logger;
 import com.millicast.Media;
 import com.millicast.Publisher;
 import com.millicast.Subscriber;
+import com.millicast.Track;
 import com.millicast.VideoCapabilities;
 import com.millicast.VideoRenderer;
 import com.millicast.VideoSource;
 import com.millicast.VideoTrack;
 
+import org.webrtc.Camera1Enumerator;
+import org.webrtc.Camera2Enumerator;
+import org.webrtc.CameraEnumerator;
 import org.webrtc.RendererCommon.ScalingType;
 
 import java.util.ArrayList;
 import java.util.Optional;
 
+import static com.millicast.Source.Type.NDI;
 import static com.millicast.android_app.Constants.ACCOUNT_ID;
 import static com.millicast.android_app.Constants.ACTION_MAIN_CAMERA_CLOSE;
 import static com.millicast.android_app.Constants.ACTION_MAIN_CAMERA_OPEN;
@@ -48,6 +53,7 @@ public class MillicastManager {
     public static String keyPublishApiUrl = "PUBLISH_URL";
     public static String keySubscribeApiUrl = "SUBSCRIBE_URL";
     public static String keyRicohTheta = "RICOH_THETA";
+    public static String keyConVisible = "CON_VISIBLE";
 
     private static MillicastManager SINGLE_INSTANCE;
 
@@ -105,8 +111,8 @@ public class MillicastManager {
     private boolean pubVideoEnabled = false;
     private boolean subAudioEnabled = false;
     private boolean subVideoEnabled = false;
-    private boolean ndiVideo = false;
-    private boolean ndiAudio = false;
+    private boolean ndiOutputVideo = false;
+    private boolean ndiOutputAudio = false;
 
     private String accountId = ACCOUNT_ID;
     private String streamNamePub = STREAM_NAME_PUB;
@@ -123,6 +129,11 @@ public class MillicastManager {
     private int audioSourceIndex;
     private ArrayList<AudioSource> audioSourceList;
     private AudioSource audioSource;
+    /**
+     * The list of {@link AudioPlayback} devices available for us to play subscribed audio.
+     * The desired device must be selected and {@link AudioPlayback#initPlayback() initiated}
+     * before the {@link AudioTrack} is subscribed.
+     */
     private ArrayList<AudioPlayback> audioPlaybackList;
     private String audioPlaybackIndexKey = "AUDIO_PLAYBACK_INDEX";
     private int audioPlaybackIndexDefault = 0;
@@ -161,6 +172,8 @@ public class MillicastManager {
     private VideoTrack subVideoTrack;
     private VideoRenderer pubRenderer;
     private VideoRenderer subRenderer;
+    private boolean pubMirrored = false;
+    private boolean subMirrored = false;
     private ScalingType pubScaling = SCALE_ASPECT_FIT;
     private ScalingType subScaling = SCALE_ASPECT_FIT;
 
@@ -184,9 +197,9 @@ public class MillicastManager {
     // APIs
     //**********************************************************************************************
 
-    /**
-     Millicast platform
-     */
+    //**********************************************************************************************
+    // Millicast platform
+    //**********************************************************************************************
 
     /**
      * Method to get and initialize MillicastManager Singleton instance.
@@ -405,9 +418,9 @@ public class MillicastManager {
         Log.d(TAG, "setSubState: " + subState);
     }
 
-    /**
-     Connect
-     */
+    //**********************************************************************************************
+    // Connect
+    //**********************************************************************************************
 
     /**
      * Connect to Millicast for publishing.
@@ -452,191 +465,28 @@ public class MillicastManager {
         logD(TAG, logTag + "Trying...");
     }
 
-    /**
-     * Capture
-     */
-
-    public int getAudioCodecIndex() {
-        return audioCodecIndex;
-    }
-
-    public int getVideoCodecIndex() {
-        return videoCodecIndex;
-    }
-
+    //**********************************************************************************************
+    // Select/Switch videoSource, capability.
+    //**********************************************************************************************
 
     /**
-     * Get the current list of VideoCapabilities available.
-     *
-     * @return
+     * Get the currently available lists of audio and video sources.
+     * This can be useful when the lists changed, for e.g. when an NDI source is added or removed.
      */
-    public ArrayList<VideoCapabilities> getCapabilityList() {
-        return capabilityList;
+    public void refreshMediaLists() {
+        getAudioSourceList(true);
+        getVideoSourceList(true);
     }
-
-    /**
-     * Start capturing both audio and video (based on selected videoSource).
-     */
-    public void startAudioVideoCapture() {
-        logD(TAG, "[Capture][Audio][Video][Start] Starting Capture...");
-        startCaptureVideo();
-        startCaptureAudio();
-    }
-
-    /**
-     * Stop capturing both audio and video.
-     */
-    public void stopAudioVideoCapture() {
-        logD(TAG, "[Capture][Audio][Video][Stop] Stopping Capture...");
-        stopCaptureVideo();
-        stopCaptureAudio();
-    }
-
-    public AudioTrack getPubAudioTrack() {
-        return pubAudioTrack;
-    }
-
-    public VideoTrack getPubVideoTrack() {
-        return pubVideoTrack;
-    }
-
-    public AudioTrack getSubAudioTrack() {
-        return subAudioTrack;
-    }
-
-    public void setSubAudioTrack(AudioTrack subAudioTrack) {
-        this.subAudioTrack = subAudioTrack;
-    }
-
-    public VideoTrack getSubVideoTrack() {
-        return subVideoTrack;
-    }
-
-    /**
-     * Render
-     */
-
-    /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
-     * By default this renderer will be
-     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
-     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
-     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
-     * to have a natural feel when looking at the local Publisher view.
-     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
-     *
-     * @return {@link VideoRenderer}
-     */
-    public VideoRenderer getPubRenderer() {
-        // If it's not available, create it with application context.
-        if (pubRenderer == null) {
-            pubRenderer = new VideoRenderer(context);
-            pubRenderer.setScalingType(pubScaling);
-            pubRenderer.setMirror(true);
-
-            logD(TAG, "[getPubRenderer] Created renderer with application context.");
-        } else {
-            logD(TAG, "[getPubRenderer] Using existing renderer.");
-        }
-        return pubRenderer;
-    }
-
-    /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
-     * By default this renderer will be
-     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
-     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
-     * The scaling effect is not transmitted to the Publisher.
-     *
-     * @return {@link VideoRenderer}
-     */
-    public VideoRenderer getSubRenderer() {
-        // If it's not available, create it with application context.
-        if (subRenderer == null) {
-            subRenderer = new VideoRenderer(context);
-            subRenderer.setScalingType(subScaling);
-            logD(TAG, "[getSubRenderer] Created renderer with application context.");
-        } else {
-            logD(TAG, "[getSubRenderer] Using existing renderer.");
-        }
-        return subRenderer;
-    }
-
-    /**
-     * Set the videoTrack in MillicastManager and render it.
-     * Must be called on UI thread.
-     *
-     * @param subVideoTrack
-     */
-    public void setRenderSubVideoTrack(VideoTrack subVideoTrack) {
-        this.subVideoTrack = subVideoTrack;
-        if (subVideoTrack == null) {
-            logD(TAG, "[setRenderSubVideoTrack] videoTrack is null, so not rendering it...");
-            return;
-        }
-
-        if (isNdiVideoRequested()) {
-            subVideoTrack.enableNdiOutput("android-video");
-            logD(TAG, "[setRenderSubVideoTrack] Enabled NDI output.");
-        }
-
-        setSubVideoEnabled(true);
-        logD(TAG, "[setRenderSubVideoTrack] Set videoTrack, trying to render it...");
-
-        renderSubVideo();
-    }
-
-    /**
-     * Mute / unmute audio / video.
-     */
-
-    public boolean isPubAudioEnabled() {
-        return pubAudioEnabled;
-    }
-
-    public void setPubAudioEnabled(boolean pubAudioEnabled) {
-        this.pubAudioEnabled = pubAudioEnabled;
-    }
-
-    public boolean isPubVideoEnabled() {
-        return pubVideoEnabled;
-    }
-
-    public void setPubVideoEnabled(boolean pubVideoEnabled) {
-        this.pubVideoEnabled = pubVideoEnabled;
-    }
-
-    public boolean isSubAudioEnabled() {
-        return subAudioEnabled;
-    }
-
-    public void setSubAudioEnabled(boolean subAudioEnabled) {
-        this.subAudioEnabled = subAudioEnabled;
-    }
-
-    public boolean isSubVideoEnabled() {
-        return subVideoEnabled;
-    }
-
-    public void setSubVideoEnabled(boolean subVideoEnabled) {
-        this.subVideoEnabled = subVideoEnabled;
-    }
-
-    /**
-     * Select/Switch videoSource, capability, rendering and codec.
-     */
-
 
     /**
      * Get or generate (if null) the current list of AudioSources available.
      *
+     * @param refresh
      * @return
      */
-    public ArrayList<AudioSource> getAudioSourceList() {
-        String logTag = "[Source][Audio][Get] ";
-        if (audioSourceList != null) {
-            logD(TAG, logTag + "Using existing audioSources.");
-        } else {
+    public ArrayList<AudioSource> getAudioSourceList(boolean refresh) {
+        String logTag = "[Source][Audio][List] ";
+        if (audioSourceList == null || refresh) {
             logD(TAG, logTag + "Getting new audioSources.");
             // Get new audioSources.
             audioSourceList = getMedia().getAudioSources();
@@ -644,6 +494,8 @@ public class MillicastManager {
                 logD(TAG, logTag + "No audioSource is available!");
                 return null;
             }
+        } else {
+            logD(TAG, logTag + "Using existing audioSources.");
         }
 
         // Print out list of audioSources.
@@ -701,15 +553,53 @@ public class MillicastManager {
     }
 
     /**
+     * Select the next available audioSource on device.
+     * This will set the audioSource to be used when capturing starts.
+     * If at end of range of audioSources, cycle to start of the other end.
+     * If capturing, switching audioSource will not be allowed.
+     *
+     * @param ascending If true, "next" audioSource is defined in the direction of increasing index,
+     *                  otherwise it is in the opposite direction.
+     * @return Null if {@link #audioSource} could be set, else an error message might be returned.
+     */
+    public String switchAudioSource(boolean ascending) {
+
+        String logTag = "[Source][Audio][Switch] ";
+        String error;
+        Integer newValue = null;
+
+        // If videoSource is already capturing, switch to only non-NDI videoSource.
+        if (isAudioCaptured()) {
+            error = "Failed! Unable to switch audioSource when capturing.";
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        newValue = audioSourceIndexNext(ascending, audioSourceIndex, getAudioSourceList(false).size());
+        if (newValue == null) {
+            error = "FAILED! Unable to get next audioSource!";
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        // Set new audioSource
+        logD(TAG, logTag + "Setting audioSource index to:"
+                + newValue + ".");
+        setAudioSourceIndex(newValue);
+
+        logD(TAG, logTag + "OK.");
+        return null;
+    }
+
+    /**
      * Get or generate (if null) the current list of VideoSources available.
      *
+     * @param refresh
      * @return
      */
-    public ArrayList<VideoSource> getVideoSourceList() {
-        String logTag = "[Source][[Video][Get] ";
-        if (videoSourceList != null) {
-            logD(TAG, logTag + "Using existing videoSources.");
-        } else {
+    public ArrayList<VideoSource> getVideoSourceList(boolean refresh) {
+        String logTag = "[Source][Video][List] ";
+        if (videoSourceList == null || refresh) {
             logD(TAG, logTag + "Getting new videoSources.");
             // Get new videoSources.
             videoSourceList = getMedia().getVideoSources();
@@ -717,6 +607,8 @@ public class MillicastManager {
                 logD(TAG, logTag + "No videoSource is available!");
                 return null;
             }
+        } else {
+            logD(TAG, logTag + "Using existing videoSources.");
         }
 
         // Print out list of videoSources.
@@ -752,11 +644,19 @@ public class MillicastManager {
      *
      * @param newValue    The new value to be set.
      * @param setCapIndex If true, will setCapabilityIndex with current value to update capability.
-     *                    If false, only new capabilityList will be set.
+     * @return Null if {@link #videoSourceIndex} could be set, else an error message might be returned.
      */
-    public void setVideoSourceIndex(int newValue, boolean setCapIndex) {
+    public String setVideoSourceIndex(int newValue, boolean setCapIndex) {
 
         String logTag = "[Source][Video][Index][Set] ";
+
+        // If capturing, do not allow changing to and from NDI.
+        String error = getErrorSwitchNdi(newValue, videoSource, getVideoSourceList(false));
+        if (error != null) {
+            logD(TAG, logTag + error);
+            return error;
+        }
+
         Utils.saveValue(videoSourceIndexKey, videoSourceIndex, newValue, logTag, context);
 
         videoSourceIndex = newValue;
@@ -775,38 +675,61 @@ public class MillicastManager {
             logD(TAG, logTag + "Not setting capabilityIndex again.");
         }
         logD(TAG, logTag + "OK.");
-
+        return null;
     }
 
     /**
      * Stop capturing on current videoSource and capture using the next available videoSource on device.
      * If not currently capturing, this will set the videoSource to be used when capturing starts.
      * If at end of range of videoSources, cycle to start of the other end.
+     * If capturing, only the device's cameras can be switched to and fro.
+     * If the next videoSource is NDI, then it will be skipped and the next device camera switched to.
      *
      * @param ascending If true, "next" videoSource is defined in the direction of increasing index,
      *                  otherwise it is in the opposite direction.
+     * @return Null if {@link #videoSource} could be set, else an error message might be returned.
      */
-    public void switchVideoSource(boolean ascending) {
+    public String switchVideoSource(boolean ascending) {
 
-        Integer newValue = videoSourceIndexNext(ascending);
+        String logTag = "[Source][Video][Switch] ";
+
+        // If capturing with NDI, do not allow changing.
+        // Check using current videoSourceIndex.
+        String error = getErrorSwitchNdi(videoSourceIndex, videoSource, getVideoSourceList(false));
+        if (error != null) {
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        Integer newValue = null;
+        // If videoSource is already capturing, switch to only non-NDI videoSource.
+        if (isVideoCaptured()) {
+            newValue = videoSourceIndexNextNonNdi(ascending, videoSourceIndex, getVideoSourceList(false));
+        } else {
+            newValue = videoSourceIndexNext(ascending, videoSourceIndex, getVideoSourceList(false).size());
+        }
         if (newValue == null) {
-            logD(TAG, "[VideoSource][Switch] FAILED! Unable to get next camera!");
-            return;
+            error = "FAILED! Unable to get next camera!";
+            logD(TAG, logTag + error);
+            return error;
         }
 
         // Set new videoSource
-        logD(TAG, "[VideoSource][Switch] Setting videoSource index to:"
+        logD(TAG, logTag + "Setting videoSource index to:"
                 + newValue + " and updating Capability for new VideoSource.");
         setVideoSourceIndex(newValue, true);
 
-        if (!isVideoCaptured()) {
-            // If not currently capturing, we are unable to switch videoSource,
-            // as that requires a currently capturing videoSource.
-            logD(TAG, "[VideoSource][Switch] Not switching videoSource as not currently capturing.");
-            return;
-        } else {
-            logD(TAG, "[VideoSource][Switch] OK.");
-        }
+        logD(TAG, logTag + " OK.");
+        return null;
+    }
+
+    /**
+     * Get the current list of VideoCapabilities available.
+     *
+     * @return
+     */
+    public ArrayList<VideoCapabilities> getCapabilityList() {
+        return capabilityList;
     }
 
     public int getCapabilityIndex() {
@@ -845,6 +768,8 @@ public class MillicastManager {
 
         Integer newValue = capabilityIndexNext(ascending);
         if (newValue == null) {
+            // This will be the case for NDI source.
+            capability = null;
             logD(TAG, "[Capability][Switch] FAILED! Unable to get next capability!");
             return;
         }
@@ -856,6 +781,212 @@ public class MillicastManager {
         logD(TAG, "[Capability][Switch] OK. VideoSource: " +
                 getVideoSourceName() +
                 " Capability: " + getCapabilityStr(capability) + ".");
+    }
+
+    //**********************************************************************************************
+    // Capture
+    //**********************************************************************************************
+
+    /**
+     * Start capturing both audio and video (based on selected videoSource).
+     */
+    public void startAudioVideoCapture() {
+        logD(TAG, "[Capture][Audio][Video][Start] Starting Capture...");
+        startCaptureVideo();
+        startCaptureAudio();
+    }
+
+    /**
+     * Stop capturing both audio and video.
+     */
+    public void stopAudioVideoCapture() {
+        logD(TAG, "[Capture][Audio][Video][Stop] Stopping Capture...");
+        stopCaptureVideo();
+        stopCaptureAudio();
+    }
+
+    public AudioTrack getPubAudioTrack() {
+        return pubAudioTrack;
+    }
+
+    public VideoTrack getPubVideoTrack() {
+        return pubVideoTrack;
+    }
+
+    public AudioTrack getSubAudioTrack() {
+        return subAudioTrack;
+    }
+
+    public void setSubAudioTrack(AudioTrack subAudioTrack) {
+        this.subAudioTrack = subAudioTrack;
+        enableNdiOutput(isNdiOutputEnabled(true), true, null);
+    }
+
+    public VideoTrack getSubVideoTrack() {
+        return subVideoTrack;
+    }
+
+    //**********************************************************************************************
+    // Mute / unmute audio / video.
+    //**********************************************************************************************
+
+    public boolean isPubAudioEnabled() {
+        return pubAudioEnabled;
+    }
+
+    public void setPubAudioEnabled(boolean pubAudioEnabled) {
+        this.pubAudioEnabled = pubAudioEnabled;
+    }
+
+    public boolean isPubVideoEnabled() {
+        return pubVideoEnabled;
+    }
+
+    public void setPubVideoEnabled(boolean pubVideoEnabled) {
+        this.pubVideoEnabled = pubVideoEnabled;
+    }
+
+    public boolean isSubAudioEnabled() {
+        return subAudioEnabled;
+    }
+
+    public void setSubAudioEnabled(boolean subAudioEnabled) {
+        this.subAudioEnabled = subAudioEnabled;
+    }
+
+    public boolean isSubVideoEnabled() {
+        return subVideoEnabled;
+    }
+
+    public void setSubVideoEnabled(boolean subVideoEnabled) {
+        this.subVideoEnabled = subVideoEnabled;
+    }
+
+    //**********************************************************************************************
+    // Render
+    //**********************************************************************************************
+
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
+     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
+     * to have a natural feel when looking at the local Publisher view.
+     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
+     *
+     * @return {@link VideoRenderer}
+     */
+    public VideoRenderer getPubRenderer() {
+        // If it's not available, create it with application context.
+        if (pubRenderer == null) {
+            pubRenderer = new VideoRenderer(context);
+            pubRenderer.setScalingType(pubScaling);
+
+            logD(TAG, "[getPubRenderer] Created renderer with application context.");
+        } else {
+            logD(TAG, "[getPubRenderer] Using existing renderer.");
+        }
+        return pubRenderer;
+    }
+
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
+     * The scaling effect is not transmitted to the Publisher.
+     *
+     * @return {@link VideoRenderer}
+     */
+    public VideoRenderer getSubRenderer() {
+        // If it's not available, create it with application context.
+        if (subRenderer == null) {
+            subRenderer = new VideoRenderer(context);
+            subRenderer.setScalingType(subScaling);
+            logD(TAG, "[getSubRenderer] Created renderer with application context.");
+        } else {
+            logD(TAG, "[getSubRenderer] Using existing renderer.");
+        }
+        return subRenderer;
+    }
+
+    /**
+     * Set the videoTrack in MillicastManager and render it.
+     * Must be called on UI thread.
+     *
+     * @param subVideoTrack
+     */
+    public void setRenderSubVideoTrack(VideoTrack subVideoTrack) {
+        this.subVideoTrack = subVideoTrack;
+        if (subVideoTrack == null) {
+            logD(TAG, "[setRenderSubVideoTrack] videoTrack is null, so not rendering it...");
+            return;
+        }
+        enableNdiOutput(isNdiOutputEnabled(false), false, null);
+
+        setSubVideoEnabled(true);
+        logD(TAG, "[setRenderSubVideoTrack] Set videoTrack, trying to render it...");
+
+        renderSubVideo();
+    }
+
+    public boolean isPubMirrored() {
+        return pubMirrored;
+    }
+
+    /**
+     * Switch the mirroring of the specified videoRenderer from mirrored to not mirrored,
+     * and vice-versa.
+     *
+     * @param forPub If true, will be performed for the Publisher's videoRenderer,
+     *               else for the Subscriber's videoRenderer.
+     */
+    public void switchMirror(boolean forPub) {
+        String logTag = "[Mirror][Switch]";
+        VideoRenderer renderer = subRenderer;
+        boolean toMirror;
+        if (forPub) {
+            logTag += "[Pub] ";
+            renderer = pubRenderer;
+            toMirror = !pubMirrored;
+        } else {
+            logTag += "[Sub] ";
+            toMirror = !subMirrored;
+        }
+
+        logD(TAG, logTag + "Trying to set mirroring for videoRenderer to: " + toMirror + ".");
+        switchMirror(toMirror, renderer, forPub);
+    }
+
+    /**
+     * Apply again the current {@link ScalingType} of the specified videoRenderer.
+     * This could be useful when the videoView's aspect ratio has changed.
+     *
+     * @param forPub If true, will be performed for the Publisher's videoRenderer,
+     *               else for the Subscriber's videoRenderer.
+     * @return
+     */
+    public ScalingType applyScaling(boolean forPub) {
+        String logTag = "[Scale][Apply]";
+        VideoRenderer renderer = subRenderer;
+        ScalingType scaling = subScaling;
+        if (forPub) {
+            logTag += "[Pub] ";
+            renderer = pubRenderer;
+            scaling = pubScaling;
+        } else {
+            logTag += "[Sub] ";
+        }
+
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return null;
+        }
+
+        renderer.setScalingType(scaling);
+        logD(TAG, logTag + "OK: " + scaling + ".");
+        return scaling;
     }
 
     /**
@@ -873,21 +1004,24 @@ public class MillicastManager {
      *
      * @param ascending If true, "next" ScalingType is defined in the direction of increasing index,
      *                  otherwise it is in the opposite direction.
-     * @param forPub
+     * @param forPub    If true, will be performed for the Publisher's videoRenderer,
+     *                  else for the Subscriber's videoRenderer.
      * @return
      */
     public ScalingType switchScaling(boolean ascending, boolean forPub) {
-        String logTag = "[Scale][Switch] ";
-        String rendererStr = "subRenderer";
+        String logTag = "[Scale][Switch]";
         VideoRenderer renderer = subRenderer;
         ScalingType scaling = subScaling;
         if (forPub) {
-            rendererStr = "pubRenderer";
+            logTag += "[Pub] ";
             renderer = pubRenderer;
             scaling = pubScaling;
+        } else {
+            logTag += "[Sub] ";
         }
+
         if (renderer == null) {
-            logD(TAG, logTag + "Failed! The " + rendererStr + " is not available.");
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
             return null;
         }
 
@@ -895,7 +1029,7 @@ public class MillicastManager {
         int size = ScalingType.values().length;
         int next = Utils.indexNext(size, now, ascending, logTag);
         ScalingType nextScaling = ScalingType.values()[next];
-        logD(TAG, logTag + "Next for " + rendererStr + ": " + nextScaling + ".");
+        logD(TAG, logTag + "Next for videoRenderer: " + nextScaling + ".");
 
         renderer.setScalingType(nextScaling);
         if (forPub) {
@@ -903,20 +1037,25 @@ public class MillicastManager {
         } else {
             subScaling = nextScaling;
         }
+        logD(TAG, logTag + "OK.");
         return nextScaling;
     }
+
+    //**********************************************************************************************
+    // Publish
+    //**********************************************************************************************
 
     /**
      * Get or generate (if null) the current list of Video Codec supported.
      *
-     * @param isAudio
+     * @param forAudio
      * @return
      */
-    public ArrayList<String> getCodecList(boolean isAudio) {
+    public ArrayList<String> getCodecList(boolean forAudio) {
         String logTag = "[Codec][List] ";
         String log;
         ArrayList<String> codecList;
-        if (isAudio) {
+        if (forAudio) {
             logTag = "[Audio]" + logTag;
             if (audioCodecList == null) {
                 audioCodecList = getMedia().getSupportedAudioCodecs();
@@ -941,21 +1080,29 @@ public class MillicastManager {
         return codecList;
     }
 
+    public int getAudioCodecIndex() {
+        return audioCodecIndex;
+    }
+
+    public int getVideoCodecIndex() {
+        return videoCodecIndex;
+    }
+
     /**
      * Set the selected codec index to the specified value and save to device memory.
      * A new videoCodec will be set using this value, unless the Publisher is publishing.
      * This videoCodec will be set into the Publisher, if it is available and not publishing.
      *
      * @param newValue The new value to be set.
-     * @param isAudio
+     * @param forAudio
      * @return true if new index set, false otherwise.
      */
-    public boolean setCodecIndex(int newValue, boolean isAudio) {
+    public boolean setCodecIndex(int newValue, boolean forAudio) {
         String logTag = "[Codec][Index][Set] ";
         // Set new value into SharePreferences.
         int oldValue = videoCodecIndex;
         String key = videoCodecIndexKey;
-        if (isAudio) {
+        if (forAudio) {
             logTag = "[Audio]" + logTag;
         } else {
             logTag = "[Video]" + logTag;
@@ -965,7 +1112,7 @@ public class MillicastManager {
             return false;
         }
 
-        if (isAudio) {
+        if (forAudio) {
             oldValue = audioCodecIndex;
             key = audioCodecIndexKey;
             audioCodecIndex = newValue;
@@ -989,17 +1136,17 @@ public class MillicastManager {
      *
      * @param ascending If true, "next" codec is defined in the direction of increasing index,
      *                  otherwise it is in the opposite direction.
-     * @param isAudio
+     * @param forAudio
      */
-    public void switchCodec(boolean ascending, boolean isAudio) {
+    public void switchCodec(boolean ascending, boolean forAudio) {
         String logTag = "[Codec][Switch] ";
-        if (isAudio) {
+        if (forAudio) {
             logTag = "[Audio]" + logTag;
         } else {
             logTag = "[Video]" + logTag;
         }
 
-        Integer newValue = codecIndexNext(ascending, isAudio);
+        Integer newValue = codecIndexNext(ascending, forAudio);
         if (newValue == null) {
             logD(TAG, logTag + "FAILED! Unable to get next codec!");
             return;
@@ -1007,15 +1154,10 @@ public class MillicastManager {
 
         logD(TAG, logTag + "Setting codec index to:"
                 + newValue + ".");
-        setCodecIndex(newValue, isAudio);
+        setCodecIndex(newValue, forAudio);
 
         logD(TAG, logTag + "OK.");
     }
-
-
-    /**
-     * Publish
-     */
 
     /**
      * Sets the Publish View into the Publisher.Listener and VideoSource.EventsHandler.
@@ -1125,9 +1267,9 @@ public class MillicastManager {
         logD(TAG, "[overrideBWE] Overridden Publisher BWE to " + value + " bytes.");
     }
 
-    /**
-     * Subscribe
-     */
+    //**********************************************************************************************
+    // Subscribe
+    //**********************************************************************************************
 
     /**
      * Sets the Subscribe View into the Subscriber.Listener.
@@ -1207,6 +1349,16 @@ public class MillicastManager {
         return audioPlaybackIndex;
     }
 
+    /**
+     * If not currently subscribed, this will set the selected {@link #audioPlaybackIndex}
+     * to the specified value and save to device memory.
+     * A new {@link #audioPlayback} will be set using this value.
+     * If currently subscribed, no changes to the current {@link #audioPlayback} will be made
+     * as changes can only be made when there is no subscription on going.
+     *
+     * @param newValue
+     * @return
+     */
     public boolean setAudioPlaybackIndex(int newValue) {
         String logTag = "[Playback][Audio][Index][Set] ";
 
@@ -1224,9 +1376,9 @@ public class MillicastManager {
         return true;
     }
 
-    /**
-     * Utilities
-     */
+    //**********************************************************************************************
+    // Utilities
+    //**********************************************************************************************
 
     public Context getContext() {
         return context;
@@ -1237,11 +1389,26 @@ public class MillicastManager {
      *
      * @return
      */
+    public String getAudioSourceName() {
+        String name = "[" + audioSourceIndex + "] ";
+        String log = "[Source][Audio][Name] Using ";
+        // Get audioSource name of selected index.
+        name += getAudioSourceStr(getAudioSource(), true);
+        log += "Selected AS: " + name;
+        logD(TAG, log);
+        return name;
+    }
+
+    /**
+     * Get the name of the currently selected videoSource.
+     *
+     * @return
+     */
     public String getVideoSourceName() {
-        String name;
-        String log = "[VideoSource][Name] Using ";
+        String name = "[" + videoSourceIndex + "] ";
+        String log = "[Source][Video][Name] Using ";
         // Get videoSource name of selected index.
-        name = getVideoSourceStr(getVideoSource(true), true);
+        name += getVideoSourceStr(getVideoSource(true), true);
         log += "Selected VS: " + name;
         logD(TAG, log);
         return name;
@@ -1263,15 +1430,50 @@ public class MillicastManager {
     }
 
     /**
-     * Get the name of the currently selected video Codec.
+     * Get the name of the currently selected ScalingType.
      *
-     * @param isAudio
+     * @param forPub If true, will be performed for the Publisher's videoRenderer,
+     *               else for the Subscriber's videoRenderer.
      * @return
      */
-    public String getCodecName(boolean isAudio) {
+    public String getScalingName(boolean forPub) {
+        String name = "";
+        String logTag = "[Scale][Name]";
+
+        ScalingType scaling = subScaling;
+        if (forPub) {
+            logTag += "[Pub] ";
+            scaling = pubScaling;
+        } else {
+            logTag += "[Sub] ";
+        }
+
+        switch (scaling) {
+            case SCALE_ASPECT_FIT:
+                name = "FIT";
+                break;
+            case SCALE_ASPECT_FILL:
+                name = "FILL";
+                break;
+            case SCALE_ASPECT_BALANCED:
+                name = "BAL";
+                break;
+        }
+
+        logD(TAG, logTag + name + ".");
+        return name;
+    }
+
+    /**
+     * Get the name of the currently selected video Codec.
+     *
+     * @param forAudio
+     * @return
+     */
+    public String getCodecName(boolean forAudio) {
         int index = videoCodecIndex;
         String codec = videoCodec;
-        if (isAudio) {
+        if (forAudio) {
             index = audioCodecIndex;
             codec = audioCodec;
         }
@@ -1324,20 +1526,114 @@ public class MillicastManager {
         }
     }
 
-    public boolean isNdiVideoRequested() {
-        return ndiVideo;
+    /**
+     * <p>
+     * Warning: NDI output for {@link AudioTrack} is not functional, see warning for
+     * {@link #enableNdiOutput} for more details.
+     * </p>
+     * Checks if subscribed media (audio or video as specified) has
+     * enabled (or requested if not yet capturing) NDI output.
+     *
+     * @param forAudio If true, this is for audio NDI output, otherwise for video NDI output.
+     * @return
+     */
+    public boolean isNdiOutputEnabled(boolean forAudio) {
+        String logTag = "[NDI][Output]";
+        Track track = subAudioTrack;
+        boolean ndiEnabled = ndiOutputAudio;
+
+        if (forAudio) {
+            logTag += "[Audio][?] ";
+        } else {
+            logTag += "[Video][?] ";
+            track = subVideoTrack;
+            ndiEnabled = ndiOutputVideo;
+        }
+
+        if (track == null) {
+            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: Does not exist.");
+            return ndiEnabled;
+        } else {
+            boolean enabled = track.isNdiOutputEnabled();
+            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: " + enabled + ".");
+        }
+        return ndiEnabled;
     }
 
-    public void setNdiVideo(boolean ndiVideo) {
-        this.ndiVideo = ndiVideo;
-    }
+    /**
+     * <p>
+     * Warning: As of SDK 1.1.1 and until documented otherwise in the SDK,
+     * {@link AudioTrack#enableNdiOutput enabling} and {@link AudioTrack#disableNdiOutput() disabling}
+     * NDI output for {@link AudioTrack} is still not functional, i.e. will not have any impact on
+     * NDI output when called. To enable audio NDI output for subscribed stream, please use
+     * "ndi output" from the {@link #audioPlaybackList list of Audio Playback Devices}.
+     * Please see {@link #setAudioPlaybackIndex(int)} and {@link #setAudioPlayback()}.
+     * </p>
+     * Enable/disable subscribed media (audio or video as specified) to be available as NDI output.
+     * If media track is not currently available, this will set a flag to enable/disable
+     * NDI output for the media when it is available.
+     *
+     * @param enable     If true, will enable NDI output, else disable.
+     * @param forAudio   If true, this is for audio NDI output, otherwise for video NDI output.
+     * @param sourceName If NDI output enabled, this will be the NDI source name.
+     */
+    public void enableNdiOutput(boolean enable, boolean forAudio, String sourceName) {
+        String logTag = "[NDI][Output]";
+        String log = "";
+        Track track = subAudioTrack;
 
-    public boolean isNdiAudioRequested() {
-        return ndiAudio;
-    }
+        if (forAudio) {
+            logTag += "[Audio] ";
+        } else {
+            logTag += "[Video] ";
+            track = subVideoTrack;
+        }
 
-    public void setNdiAudio(boolean ndiAudio) {
-        this.ndiAudio = ndiAudio;
+        if (track == null) {
+            if (forAudio) {
+                ndiOutputAudio = enable;
+            } else {
+                ndiOutputVideo = enable;
+            }
+            logD(TAG, logTag + "Only set flag to " + enable + " Media track does not exist.");
+            return;
+        }
+
+        // Set a default source name if none was given.
+        if (sourceName == null || sourceName.isEmpty()) {
+            if (forAudio) {
+                sourceName = context.getResources().getString(R.string.ndi_name_audio);
+            } else {
+                sourceName = context.getResources().getString(R.string.ndi_name_video);
+            }
+        }
+        boolean success = false;
+        if (enable) {
+            try {
+                track.enableNdiOutput(sourceName);
+                log = "Enabled. Source name: " + sourceName + ".";
+                success = true;
+            } catch (IllegalStateException e) {
+                log = "Failed. Error: " + e.getLocalizedMessage();
+            }
+        } else {
+            try {
+                track.disableNdiOutput();
+                log = "Disabled.";
+                success = true;
+            } catch (IllegalStateException e) {
+                log = "Failed. Error: " + e.getLocalizedMessage();
+            }
+        }
+        // Set flags if successful.
+        if (success) {
+            if (forAudio) {
+                ndiOutputAudio = enable;
+            } else {
+                ndiOutputVideo = enable;
+            }
+        }
+        logD(TAG, logTag + log);
     }
 
     /**
@@ -1498,14 +1794,13 @@ public class MillicastManager {
     // Internal methods
     //**********************************************************************************************
 
-    /**
-     Millicast platform
-     */
+    //**********************************************************************************************
+    // Millicast platform
+    //**********************************************************************************************
 
-
-    /**
-     Connect
-     */
+    //**********************************************************************************************
+    // Connect
+    //**********************************************************************************************
 
     /**
      * Connect to Millicast for publishing. Publishing credentials required.
@@ -1545,16 +1840,30 @@ public class MillicastManager {
         }
     }
 
-
-    /**
-     * Capture
-     */
+    //**********************************************************************************************
+    // Select/Switch videoSource, capability.
+    //**********************************************************************************************
 
     private Media getMedia() {
         if (media == null) {
             media = Media.getInstance(context);
         }
         return media;
+    }
+
+    /**
+     * Return the current audioSource.
+     */
+    private AudioSource getAudioSource() {
+
+        String logTag = "[Source][Audio][Get] ";
+        // Return audioSource.
+        if (audioSource == null) {
+            logD(TAG, logTag + "None.");
+        } else {
+            logD(TAG, logTag + getAudioSourceStr(audioSource, true) + ".");
+        }
+        return audioSource;
     }
 
     /**
@@ -1567,7 +1876,7 @@ public class MillicastManager {
         // Create new audioSource based on index.
         AudioSource audioSourceNew;
 
-        getAudioSourceList();
+        getAudioSourceList(false);
         if (audioSourceList == null) {
             logD(TAG, logTag + "Failed as no valid audioSource was available!");
             return;
@@ -1611,62 +1920,6 @@ public class MillicastManager {
     }
 
     /**
-     * Using the selected audioSource, capture audio into a pubAudioTrack.
-     */
-    private void startCaptureAudio() {
-        String logTag = "[Capture][Audio][Start] ";
-        if (isAudioCaptured()) {
-            logD(TAG, logTag + "AudioSource is already capturing!");
-            return;
-        }
-        if (audioSource == null) {
-            logD(TAG, logTag + "Failed as unable to get valid audioSource!");
-            return;
-        }
-        pubAudioTrack = (AudioTrack) audioSource.startCapture();
-        setPubAudioEnabled(true);
-        logD(TAG, logTag + "OK");
-    }
-
-    /**
-     * Stop capturing audio, if audio is being captured.
-     */
-    private void stopCaptureAudio() {
-        String logTag = "[Audio][Capture][Stop] ";
-        if (!isAudioCaptured()) {
-            logD(TAG, logTag + "Not stopping as audio is not captured!");
-            return;
-        }
-
-        removeAudioSource();
-        logD(TAG, logTag + "Audio captured stopped.");
-        setPubAudioEnabled(false);
-        pubAudioTrack = null;
-    }
-
-    /**
-     * Set audioSource to null.
-     * If audioSource is currently capturing, stop capture first.
-     * New audioSource will be created again
-     * based on audioSourceIndex.
-     */
-    private void removeAudioSource() {
-        String logTag = "[Source][Audio][Remove] ";
-
-        // Remove audioSource
-        if (isAudioCaptured()) {
-            audioSource.stopCapture();
-            logD(TAG, logTag + "Audio capture stopped.");
-        }
-        audioSource = null;
-        logD(TAG, logTag + "Removed audioSource.");
-        logD(TAG, logTag + "Setting new audioSource.");
-        setAudioSourceIndex(audioSourceIndex);
-        logD(TAG, logTag + "OK.");
-        return;
-    }
-
-    /**
      * Either return the current videoSource, or the videoSourceSwitched,
      * based on value of getSwitched.
      * If videoSourceSwitched is not available, return videoSource.
@@ -1707,13 +1960,12 @@ public class MillicastManager {
         // Create new videoSource based on index.
         VideoSource videoSourceNew;
 
-        getVideoSourceList();
-        if (videoSourceList == null) {
+        if (getVideoSourceList(false) == null) {
             logD(TAG, logTag + "Failed as no valid videoSource was available!");
             return;
         }
 
-        int size = videoSourceList.size();
+        int size = getVideoSourceList(false).size();
         if (size < 1) {
             logD(TAG, logTag + "Failed as list size was " + size + "!");
             return;
@@ -1733,7 +1985,7 @@ public class MillicastManager {
             return;
         }
 
-        videoSourceNew = videoSourceList.get(videoSourceIndex);
+        videoSourceNew = getVideoSourceList(false).get(videoSourceIndex);
 
         String log;
         if (videoSourceNew != null) {
@@ -1753,6 +2005,7 @@ public class MillicastManager {
                     " Cap:" + videoSource.isCapturing() +
                     "\nSwitched:" + getVideoSourceStr(videoSourceSwitched, true) +
                     " Cap:" + videoSourceSwitched.isCapturing() + ".");
+            mirrorFrontCamera();
             return;
         }
 
@@ -1760,29 +2013,6 @@ public class MillicastManager {
         videoSource = videoSourceNew;
         logD(TAG, logTag + "New at index:" +
                 videoSourceIndex + " is: " + log + ".");
-    }
-
-    /**
-     * Set all forms of videoSource to null.
-     * If videoSource is currently capturing, stop capture first.
-     * New videoSource and capability will be created again
-     * based on videoSourceIndex and capabilityIndex.
-     */
-    private void removeVideoSource() {
-        String logTag = "[Source][Video][Remove] ";
-
-        // Remove all videoSource
-        if (isVideoCaptured()) {
-            videoSource.stopCapture();
-            logD(TAG, logTag + "Video capture stopped.");
-        }
-        videoSource = null;
-        videoSourceSwitched = null;
-        logD(TAG, logTag + "Removed all forms of videoSource.");
-        logD(TAG, logTag + "Setting new videoSource.");
-        setVideoSourceIndex(videoSourceIndex, true);
-        logD(TAG, logTag + "OK.");
-        return;
     }
 
     /**
@@ -1835,11 +2065,13 @@ public class MillicastManager {
     private void setCapability() {
         String logTag = "[Capability][Set] ";
         if (capabilityList == null) {
+            capability = null;
             logD(TAG, logTag + "Failed as no list was available!");
             return;
         }
         int size = capabilityList.size();
         if (size < 1) {
+            capability = null;
             logD(TAG, logTag + "Failed as list size was " + size + "!");
             return;
         }
@@ -1884,151 +2116,64 @@ public class MillicastManager {
     }
 
     /**
-     * Using the selected videoSource and capability, capture video into a pubVideoTrack.
+     * Gets the index of the next available non-NDI camera.
+     * If at end of camera range, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param ascending       If true, cycle in the direction of increasing index,
+     *                        otherwise cycle in opposite direction.
+     * @param curIndex        The current videoSourceIndex.
+     * @param videoSourceList
+     * @return
      */
-    private void startCaptureVideo() {
-        String logTag = "[Video][Capture][Start] ";
-        if (isVideoCaptured()) {
-            String log = logTag + "VideoSource is already capturing!";
-            if (capState == CaptureState.NOT_CAPTURED) {
-                logD(TAG, log + " Continuing as capState is " + capState + ".");
-            } else {
-                logD(TAG, log + " NOT continuing as capState is " + capState + ".");
-                return;
+    private Integer videoSourceIndexNextNonNdi(boolean ascending, int curIndex, ArrayList<VideoSource> videoSourceList) {
+        String logTag = "[Source][Index][Next][Video][Non][Ndi] ";
+        if (videoSourceList == null) {
+            logD(TAG, logTag + "Failed! VideoSources not created!");
+            return null;
+        }
+
+        int size = videoSourceList.size();
+
+        if (size < 1) {
+            logD(TAG, logTag + "Failed! Device does not have a camera!");
+            return null;
+        }
+        int now = curIndex;
+        int next = videoSourceIndexNext(ascending, now, size);
+        // Keep searching for the next non-NDI until
+        while (videoSourceList.get(next).getType() == NDI) {
+            if (next == now) {
+                logD(TAG, logTag + "Failed! 1 complete cycle done.");
+                return null;
             }
+            now = next;
+            next = videoSourceIndexNext(ascending, now, size);
         }
-
-        setCapState(MillicastManager.CaptureState.TRY_CAPTURE);
-
-        if (videoSource == null) {
-            setCapState(CaptureState.NOT_CAPTURED);
-            logD(TAG, logTag + "Failed as unable to get valid videoSource!");
-            return;
-        }
-
-        if (capability == null) {
-            setCapState(CaptureState.NOT_CAPTURED);
-            logD(TAG, logTag + "Failed as unable to get valid Capability for videoSource!");
-            return;
-        }
-        logD(TAG, logTag + "Set " + getVideoSourceStr(videoSource, false) +
-                " with Cap: " + getCapabilityStr(capability) + ".");
-
-        videoSource.setEventsHandler(vidSrcEvtHdl);
-        VideoTrack videoTrack = (VideoTrack) videoSource.startCapture();
-
-        if (videoSource.getType() == com.millicast.Source.Type.NDI) {
-            this.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
-        }
-
-        setRenderPubVideoTrack(videoTrack);
+        logD(TAG, logTag + next + " Failed! 1 complete cycle done.");
+        return next;
     }
 
     /**
-     * Stop capturing video, if video is being captured.
+     * Gets the index of the next available audioSource.
+     * If at end of audioSource range, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param ascending If true, cycle in the direction of increasing index,
+     *                  otherwise cycle in opposite direction.
+     * @param curIndex  The current audioSourceIndex.
+     * @param size
+     * @return
      */
-    private void stopCaptureVideo() {
-        String logTag = "[Video][Capture][Stop] ";
-        if (!isVideoCaptured()) {
-            logD(TAG, logTag + "Not stopping as video is not captured!");
-            return;
+    private Integer audioSourceIndexNext(boolean ascending, int curIndex, int size) {
+        String logTag = "[Source][Index][Next][Audio] ";
+        if (size < 1) {
+            logD(TAG, logTag + "Failed as the device does not have a audioSource!");
+            return null;
         }
-
-        removeVideoSource();
-        logD(TAG, logTag + "Video captured stopped.");
-        if (pubRenderer != null) {
-            pubRenderer.release();
-            pubRenderer = null;
-        }
-        Log.d(TAG, logTag + "Publisher renderer removed.");
-        setPubVideoEnabled(false);
-        pubVideoTrack = null;
-        setCapState(MillicastManager.CaptureState.NOT_CAPTURED);
+        int now = curIndex;
+        return Utils.indexNext(size, now, ascending, logTag);
     }
-
-    /**
-     * Check if either audio or video is captured.
-     */
-    private boolean isAudioVideoCaptured() {
-        if (!isAudioCaptured() && !isVideoCaptured()) {
-            logD(TAG, "[isAudioVideoCaptured] No!");
-            return false;
-        }
-        logD(TAG, "[isAudioVideoCaptured] Yes.");
-        return true;
-    }
-
-    /**
-     * Check if audio is captured.
-     */
-    private boolean isAudioCaptured() {
-        if (audioSource == null || !audioSource.isCapturing()) {
-            logD(TAG, "[isAudioCaptured] No!");
-            return false;
-        }
-        logD(TAG, "[isAudioCaptured] Yes.");
-        return true;
-    }
-
-    /**
-     * Check if video is captured.
-     */
-    private boolean isVideoCaptured() {
-        if (videoSource == null || !videoSource.isCapturing()) {
-            logD(TAG, "[isVideoCaptured] No!");
-            return false;
-        }
-        logD(TAG, "[isVideoCaptured] Yes.");
-        return true;
-    }
-
-    /**
-     * Render
-     */
-
-    private void setRenderPubVideoTrack(VideoTrack pubVideoTrack) {
-        this.pubVideoTrack = pubVideoTrack;
-        if (pubVideoTrack == null) {
-            logD(TAG, "[setRenderPubVideoTrack] videoTrack is null, so not rendering it...");
-            return;
-        }
-
-        setPubVideoEnabled(true);
-        logD(TAG, "[setRenderPubVideoTrack] Set videoTrack, trying to render it...");
-        renderPubVideo();
-    }
-
-    private void renderPubVideo() {
-        if (pubVideoTrack == null) {
-            logD(TAG, "[renderPubVideo] Unable to render as videoTrack does not exist.");
-            return;
-        }
-        // Set our pub renderer in our pub video track.
-        pubRenderer = getPubRenderer();
-        pubVideoTrack.setRenderer(pubRenderer);
-        logD(TAG, "[renderPubVideo] Set renderer in video track.");
-    }
-
-    private void renderSubVideo() {
-        if (subVideoTrack == null) {
-            logD(TAG, "[renderSubVideo] Unable to render as videoTrack does not exist.");
-            return;
-        }
-        // Set our sub renderer in our sub video track.
-        subRenderer = getSubRenderer();
-        subVideoTrack.setRenderer(subRenderer);
-        logD(TAG, "[renderSubVideo] Set renderer in video track.");
-    }
-
-
-    /**
-     * Mute / unmute audio / video.
-     */
-
-
-    /**
-     * Select/Switch videoSource, capability and codec.
-     */
 
     /**
      * Gets the index of the next available camera.
@@ -2037,20 +2182,17 @@ public class MillicastManager {
      *
      * @param ascending If true, cycle in the direction of increasing index,
      *                  otherwise cycle in opposite direction.
+     * @param curIndex  The current videoSourceIndex.
+     * @param size
      * @return
      */
-    private Integer videoSourceIndexNext(boolean ascending) {
-        String logTag = "[videoSourceIndexNext] ";
-        if (getVideoSourceList() == null) {
-            logD(TAG, logTag + "Failed as VideoSources not created!");
-            return null;
-        }
-        int size = videoSourceList.size();
+    private Integer videoSourceIndexNext(boolean ascending, int curIndex, int size) {
+        String logTag = "[Source][Index][Next][Video] ";
         if (size < 1) {
             logD(TAG, logTag + "Failed as the device does not have a camera!");
             return null;
         }
-        int now = videoSourceIndex;
+        int now = curIndex;
         return Utils.indexNext(size, now, ascending, logTag);
     }
 
@@ -2086,14 +2228,14 @@ public class MillicastManager {
      *
      * @param ascending If true, cycle in the direction of increasing index,
      *                  otherwise cycle in opposite direction.
-     * @param isAudio   If true, this is for audio codecs, otherwise for video codecs.
+     * @param forAudio  If true, this is for audio codecs, otherwise for video codecs.
      * @return
      */
-    private Integer codecIndexNext(boolean ascending, boolean isAudio) {
+    private Integer codecIndexNext(boolean ascending, boolean forAudio) {
         String logTag = "[Codec][Index][Next] ";
         int now;
 
-        if (isAudio) {
+        if (forAudio) {
             logTag = "[Audio]" + logTag;
             now = audioCodecIndex;
         } else {
@@ -2102,7 +2244,7 @@ public class MillicastManager {
         }
 
         int size;
-        ArrayList<String> codecList = getCodecList(isAudio);
+        ArrayList<String> codecList = getCodecList(forAudio);
         size = codecList.size();
         if (codecList == null || size < 1) {
             logD(TAG, logTag + "Failed as there is no codec!");
@@ -2113,8 +2255,343 @@ public class MillicastManager {
     }
 
     /**
-     Publish
+     * Check if it is possible to switch directly to a new videoSource.
+     * If current videoSource is capturing, do not allow changing to and from NDI.
+     * Only device cameras can be switch directly to each other without stopping capture.
+     *
+     * @param newIndex        The index of the new videoSource to switch to.
+     * @param videoSource     The current videoSource.
+     * @param videoSourceList The current videoSourceList.
+     * @return null if it is possible to switch directly to the new videoSource,
+     * else return the error message.
      */
+    private String getErrorSwitchNdi(int newIndex, VideoSource videoSource, ArrayList<VideoSource> videoSourceList) {
+        String logTag = "[Error][Ndi] ";
+        String log = null;
+        if (isVideoCaptured()) {
+            String error1 = "Failed! Unable to switch capture ";
+            String error2 = " NDI directly. Please stop (if) publishing, stop capturing, " +
+                    "then start capturing again with ";
+            if (videoSource.getType() == NDI) {
+                log = error1 + "from" + error2 + "non-NDI videoSource.";
+            } else if (videoSourceList.get(newIndex).getType() == NDI) {
+                log = error1 + "to" + error2 + "NDI videoSource.";
+            }
+        }
+
+        if (log == null) {
+            logD(TAG, logTag + "Can switch.");
+        } else {
+            logD(TAG, logTag + "Can NOT switch.");
+        }
+        return log;
+    }
+
+    //**********************************************************************************************
+    // Capture
+    //**********************************************************************************************
+
+    /**
+     * Using the selected audioSource, capture audio into a pubAudioTrack.
+     */
+    private void startCaptureAudio() {
+        String logTag = "[Capture][Audio][Start] ";
+        if (isAudioCaptured()) {
+            logD(TAG, logTag + "AudioSource is already capturing!");
+            return;
+        }
+        if (audioSource == null) {
+            logD(TAG, logTag + "Failed as unable to get valid audioSource!");
+            return;
+        }
+        pubAudioTrack = (AudioTrack) audioSource.startCapture();
+        setPubAudioEnabled(true);
+        logD(TAG, logTag + "OK");
+    }
+
+    /**
+     * Stop capturing audio, if audio is being captured.
+     */
+    private void stopCaptureAudio() {
+        String logTag = "[Capture][Stop][Audio] ";
+        if (!isAudioCaptured()) {
+            logD(TAG, logTag + "Not stopping as audio is not captured!");
+            return;
+        }
+
+        removeAudioSource();
+        logD(TAG, logTag + "Audio captured stopped.");
+        setPubAudioEnabled(false);
+        pubAudioTrack = null;
+    }
+
+    /**
+     * Set audioSource to null.
+     * If audioSource is currently capturing, stop capture first.
+     * New audioSource will be created again
+     * based on audioSourceIndex.
+     */
+    private void removeAudioSource() {
+        String logTag = "[Source][Audio][Remove] ";
+
+        // Remove audioSource
+        if (isAudioCaptured()) {
+            audioSource.stopCapture();
+            logD(TAG, logTag + "Audio capture stopped.");
+        }
+        audioSource = null;
+        logD(TAG, logTag + "Removed audioSource.");
+        logD(TAG, logTag + "Setting new audioSource.");
+        setAudioSourceIndex(audioSourceIndex);
+        logD(TAG, logTag + "OK.");
+        return;
+    }
+
+    /**
+     * Using the selected videoSource and capability, capture video into a pubVideoTrack.
+     */
+    private void startCaptureVideo() {
+        String logTag = "[Capture][Video][Start] ";
+        if (isVideoCaptured()) {
+            String log = logTag + "VideoSource is already capturing!";
+            if (capState == CaptureState.NOT_CAPTURED) {
+                logD(TAG, log + " Continuing as capState is " + capState + ".");
+            } else {
+                logD(TAG, log + " NOT continuing as capState is " + capState + ".");
+                return;
+            }
+        }
+
+        setCapState(MillicastManager.CaptureState.TRY_CAPTURE);
+
+        if (videoSource == null) {
+            setCapState(CaptureState.NOT_CAPTURED);
+            logD(TAG, logTag + "Failed as unable to get valid videoSource!");
+            return;
+        }
+
+        // Only NDI videoSource is allowed to have null capability.
+        if (capability == null && videoSource.getType() != NDI) {
+            setCapState(CaptureState.NOT_CAPTURED);
+            logD(TAG, logTag + "Failed as unable to get valid Capability for videoSource!");
+            return;
+        }
+        logD(TAG, logTag + "Set " + getVideoSourceStr(videoSource, false) +
+                " with Cap: " + getCapabilityStr(capability) + ".");
+
+        videoSource.setEventsHandler(vidSrcEvtHdl);
+        VideoTrack videoTrack = (VideoTrack) videoSource.startCapture();
+
+        if (videoSource.getType() == NDI) {
+            this.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
+        } else {
+            mirrorFrontCamera();
+        }
+
+        setRenderPubVideoTrack(videoTrack);
+    }
+
+    /**
+     * Stop capturing video, if video is being captured.
+     */
+    private void stopCaptureVideo() {
+        String logTag = "[Capture][Video][Stop] ";
+        if (!isVideoCaptured()) {
+            logD(TAG, logTag + "Not stopping as video is not captured!");
+            return;
+        }
+
+        removeVideoSource();
+        logD(TAG, logTag + "Video captured stopped.");
+        if (pubRenderer != null) {
+            pubRenderer.release();
+            pubRenderer = null;
+        }
+        setPubMirrored(false);
+        Log.d(TAG, logTag + "Publisher renderer removed.");
+        setPubVideoEnabled(false);
+        pubVideoTrack = null;
+        setCapState(MillicastManager.CaptureState.NOT_CAPTURED);
+    }
+
+    /**
+     * Set all forms of videoSource to null.
+     * If videoSource is currently capturing, stop capture first.
+     * New videoSource and capability will be created again
+     * based on videoSourceIndex and capabilityIndex.
+     */
+    private void removeVideoSource() {
+        String logTag = "[Source][Video][Remove] ";
+
+        // Remove all videoSource
+        if (isVideoCaptured()) {
+            videoSource.stopCapture();
+            logD(TAG, logTag + "Video capture stopped.");
+        }
+        videoSource = null;
+        videoSourceSwitched = null;
+        logD(TAG, logTag + "Removed all forms of videoSource.");
+        logD(TAG, logTag + "Setting new videoSource.");
+        setVideoSourceIndex(videoSourceIndex, true);
+        logD(TAG, logTag + "OK.");
+        return;
+    }
+
+    /**
+     * Check if either audio or video is captured.
+     */
+    private boolean isAudioVideoCaptured() {
+        if (!isAudioCaptured() && !isVideoCaptured()) {
+            logD(TAG, "[isAudioVideoCaptured] No!");
+            return false;
+        }
+        logD(TAG, "[isAudioVideoCaptured] Yes.");
+        return true;
+    }
+
+    /**
+     * Check if audio is captured.
+     */
+    private boolean isAudioCaptured() {
+        if (audioSource == null || !audioSource.isCapturing()) {
+            logD(TAG, "[isAudioCaptured] No!");
+            return false;
+        }
+        logD(TAG, "[isAudioCaptured] Yes.");
+        return true;
+    }
+
+    /**
+     * Check if video is captured.
+     */
+    private boolean isVideoCaptured() {
+        boolean result = false;
+        String logTag = "[Capture][Video][?] ";
+        String log = logTag;
+        if (videoSource == null) {
+            log += "F. videoSource does not exist.";
+            logD(TAG, log);
+            return result;
+        }
+
+        if (videoSource.isCapturing()) {
+            result = true;
+            log += "T.";
+        } else {
+            log += "F.";
+        }
+
+        if (NDI == videoSource.getType()) {
+            log += " NDI";
+        } else {
+            log += " non-NDI";
+        }
+        log += " videoSource.isCapturing: " + videoSource.isCapturing() +
+                ". capState is " + capState + ".";
+        logD(TAG, log);
+        return result;
+    }
+
+    //**********************************************************************************************
+    // Mute / unmute audio / video.
+    //**********************************************************************************************
+
+    //**********************************************************************************************
+    // Render
+    //**********************************************************************************************
+
+    private void setRenderPubVideoTrack(VideoTrack pubVideoTrack) {
+        this.pubVideoTrack = pubVideoTrack;
+        if (pubVideoTrack == null) {
+            logD(TAG, "[setRenderPubVideoTrack] videoTrack is null, so not rendering it...");
+            return;
+        }
+
+        setPubVideoEnabled(true);
+        logD(TAG, "[setRenderPubVideoTrack] Set videoTrack, trying to render it...");
+        renderPubVideo();
+    }
+
+    private void renderPubVideo() {
+        if (pubVideoTrack == null) {
+            logD(TAG, "[renderPubVideo] Unable to render as videoTrack does not exist.");
+            return;
+        }
+        // Set our pub renderer in our pub video track.
+        pubRenderer = getPubRenderer();
+        pubVideoTrack.setRenderer(pubRenderer);
+        logD(TAG, "[renderPubVideo] Set renderer in video track.");
+    }
+
+    private void renderSubVideo() {
+        if (subVideoTrack == null) {
+            logD(TAG, "[renderSubVideo] Unable to render as videoTrack does not exist.");
+            return;
+        }
+        // Set our sub renderer in our sub video track.
+        subRenderer = getSubRenderer();
+        subVideoTrack.setRenderer(subRenderer);
+        logD(TAG, "[renderSubVideo] Set renderer in video track.");
+    }
+
+    /**
+     * Switch the mirroring of the specified videoRenderer to the specified value.
+     *
+     * @param toMirror If true, renderer will be mirrored, else not.
+     * @param renderer The videoRenderer to be mirrored
+     * @param forPub   If true, will be performed for the Publisher's videoRenderer,
+     *                 else for the Subscriber's videoRenderer.
+     */
+    private void switchMirror(boolean toMirror, VideoRenderer renderer, boolean forPub) {
+        String logTag = "[Mirror][Switch]";
+
+        if (forPub) {
+            logTag += "[Pub] ";
+            pubMirrored = toMirror;
+        } else {
+            logTag += "[Sub] ";
+            subMirrored = toMirror;
+        }
+
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return;
+        }
+        renderer.setMirror(toMirror);
+
+        logD(TAG, logTag + "Set mirroring for videoRenderer to: " + toMirror + ".");
+    }
+
+    private void setPubMirrored(boolean isMirroredPub) {
+        pubMirrored = isMirroredPub;
+    }
+
+    /**
+     * If the active videoSource is a front facing camera, it will be mirrored.
+     * If not, it will be set to not mirrored.
+     */
+    private void mirrorFrontCamera() {
+        if (videoSource.getType() == NDI) {
+            switchMirror(false, getPubRenderer(), true);
+            return;
+        }
+        CameraEnumerator cameraEnumerator;
+        String name = getVideoSource(true).getName();
+        if (Media.isCamera2Supported(context)) {
+            cameraEnumerator = new Camera2Enumerator(context);
+        } else {
+            cameraEnumerator = new Camera1Enumerator();
+        }
+        if (cameraEnumerator.isFrontFacing(name)) {
+            switchMirror(true, getPubRenderer(), true);
+        } else {
+            switchMirror(false, getPubRenderer(), true);
+        }
+    }
+
+    //**********************************************************************************************
+    // Publish
+    //**********************************************************************************************
 
     /**
      * Get the Publisher.
@@ -2240,9 +2717,9 @@ public class MillicastManager {
         logD(TAG, log);
     }
 
-    /**
-     * Subscribe
-     */
+    //**********************************************************************************************
+    // Subscribe
+    //**********************************************************************************************
 
     /**
      * Get the Subscriber.
@@ -2290,13 +2767,23 @@ public class MillicastManager {
             subRenderer = null;
         }
         Log.d(TAG, "Subscriber renderer removed.");
+
+        // Disable NDI outputs, if any.
+        enableNdiOutput(false, true, null);
         setSubAudioEnabled(false);
         subAudioTrack = null;
+
+        enableNdiOutput(false, false, null);
         setSubVideoEnabled(false);
         subVideoTrack = null;
         setSubState(SubscriberState.CONNECTED);
     }
 
+    /**
+     * Sets the {@link #audioPlayback} at the {@link #audioPlaybackIndex}
+     * of the {@link #audioPlaybackList}.
+     * To set the {@link #audioPlaybackIndex}, use {@link #setAudioPlaybackIndex(int)}.
+     */
     private void setAudioPlayback() {
         String logTag = "[Playback][Audio][Set] ";
 
@@ -2362,10 +2849,9 @@ public class MillicastManager {
         logD(TAG, logTag + "OK. Playback initiated.");
     }
 
-
-    /**
-     * Utilities
-     */
+    //**********************************************************************************************
+    // Utilities
+    //**********************************************************************************************
 
     /**
      * Get a String that describes a MCVideoCapabilities.
@@ -2373,7 +2859,7 @@ public class MillicastManager {
     private String getCapabilityStr(VideoCapabilities cap) {
         String name;
         if (cap == null) {
-            name = "Cap:NULL!";
+            name = "Cap: N.A.";
         } else {
             // Note: FPS given in frames per 1000 seconds (FPKS).
             name = cap.width + "x" + cap.height + " fps:" + cap.fps / 1000;
@@ -2404,7 +2890,7 @@ public class MillicastManager {
     private String getVideoSourceStr(VideoSource vs, boolean longForm) {
         String name = "Cam:";
         if (vs == null) {
-            name += "NULL!";
+            name += "N.A.";
             return name;
         }
 

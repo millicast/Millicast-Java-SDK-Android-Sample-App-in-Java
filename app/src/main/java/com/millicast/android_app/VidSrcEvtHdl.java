@@ -13,7 +13,7 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
 
     private PublishFragment publishFragment;
     private MillicastManager mcManager;
-    private String logTag = "[Video][EvtHdl] ";
+    private String logTag = "[EvtHdl][Video] ";
 
     public VidSrcEvtHdl() {
         mcManager = MillicastManager.getSingleInstance();
@@ -36,7 +36,7 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
 
     @Override
     public void onCameraOpening(String s) {
-        makeSnackbar(logTag + "Camera opening... " + s, publishFragment);
+        makeSnackbar(logTag, "Camera opening... " + s, publishFragment);
         final boolean[] paramPreviewSet = new boolean[1];
         Handler handler = new Handler();
         final double[] delaySec = {0};
@@ -56,7 +56,7 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
                         mcManager.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
                     }
                     setButtons();
-                    makeSnackbar(logTag + "RT Camera opening... Set camera params success at " +
+                    makeSnackbar(logTag, "RT Camera opening... Set camera params success at " +
                             delaySec[0] + " s.", publishFragment);
                 }
             }
@@ -79,17 +79,17 @@ class VidSrcEvtHdl implements VideoSource.EventsHandler {
 
     @Override
     public void onCameraOpened() {
-        makeSnackbar(logTag + "Camera opened", publishFragment);
+        makeSnackbar(logTag, "Camera opened", publishFragment);
     }
 
     @Override
     public void onFirstFrameAvailable() {
-        makeSnackbar(logTag + "First Frame available", publishFragment);
+        makeSnackbar(logTag, "First Frame available", publishFragment);
     }
 
     @Override
     public void onCameraClosed() {
-        makeSnackbar(logTag + "Camera closed", publishFragment);
+        makeSnackbar(logTag, "Camera closed", publishFragment);
     }
 
     public void setPublishFragment(PublishFragment publishFragment) {

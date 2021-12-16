@@ -34,4 +34,6 @@
     <string name="publish_url">publish url</string>
     <string name="subscribe_url">subscribe url</string>
     <string name="ricoh_theta">Ricoh Theta</string>
+    <string name="ndi_name_video">Millicast-AND-Video</string>
+    <string name="ndi_name_audio">Millicast-AND-Audio</string>
 </resources>

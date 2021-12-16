@@ -13,57 +13,30 @@
         android:orientation="horizontal">
 
         <LinearLayout
-            android:id="@+id/linear_layout_sub_1"
+            android:id="@+id/linear_layout_video_sub"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="0.75"
             android:orientation="vertical">
 
-            <LinearLayout
-                android:id="@+id/linear_layout_sub_1_0"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.9"
-                android:orientation="vertical">
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/linear_layout_sub_1_1"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.1"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/text_view_sub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.85"
-                    android:autoSizeTextType="uniform"
-                    android:text="Account: Stream: "
-                    android:textIsSelectable="true" />
-
-                <Switch
-                    android:id="@+id/switchDirectionSub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.15"
-                    android:autoSizeTextType="uniform"
-                    android:text="->"
-                    android:textAlignment="center" />
-
-            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/linear_layout_sub_2"
+            android:id="@+id/linear_layout_con_sub"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="0.25"
             android:gravity="center"
             android:orientation="vertical"
             app:layout_constraintHorizontal_bias="0.0">
+
+            <TextView
+                android:id="@+id/text_view_sub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autoSizeTextType="uniform"
+                android:text="Account: Stream: "
+                android:textIsSelectable="true" />
 
             <Button
                 android:id="@+id/button_audio_sub"
@@ -80,11 +53,27 @@
                 android:text="@string/muteVideo" />
 
             <Button
+                android:id="@+id/button_scale_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:autoSizeTextType="uniform"
+                android:text="Scale" />
+
+            <Button
                 android:id="@+id/button_subscribe"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:autoSizeTextType="uniform"
                 android:text="@string/startSubscribe" />
+
+            <Switch
+                android:id="@+id/switchDirectionSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autoSizeTextType="uniform"
+                android:text="->"
+                android:textAlignment="center" />
 
         </LinearLayout>
     </LinearLayout>

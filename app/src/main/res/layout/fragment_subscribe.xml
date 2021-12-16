@@ -13,7 +13,7 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/linear_layout_sub_1_0"
+            android:id="@+id/linear_layout_video_sub"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="0.75"
@@ -22,7 +22,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/linear_layout_sub_2"
+            android:id="@+id/linear_layout_con_sub"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -76,6 +76,14 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_scale_sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:text="Scale" />
 
                 <Button
                     android:id="@+id/button_subscribe"

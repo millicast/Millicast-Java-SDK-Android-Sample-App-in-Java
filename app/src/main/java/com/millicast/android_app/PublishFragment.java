@@ -21,6 +21,7 @@ import com.millicast.VideoTrack;
 import org.webrtc.RendererCommon;
 
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.MillicastManager.keyConVisible;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
@@ -28,19 +29,25 @@ public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
     private final MillicastManager mcManager;
-    private LinearLayout linearLayout;
+    private LinearLayout linearLayoutVideo;
+    private LinearLayout linearLayoutCon;
     private TextView textView;
     private Switch switchDirection;
-    private Button buttonCamera;
+    private Button buttonRefresh;
+    private Button buttonAudioSrc;
+    private Button buttonVideoSrc;
     private Button buttonResolution;
-    private Button buttonAudioCodec;
-    private Button buttonVideoCodec;
-    private Button buttonPublish;
     private Button buttonCapture;
     private Button buttonAudio;
     private Button buttonVideo;
+    private Button buttonMirror;
+    private Button buttonScale;
+    private Button buttonAudioCodec;
+    private Button buttonVideoCodec;
+    private Button buttonPublish;
 
     private boolean ascending = true;
+    private boolean conVisible = true;
 
     public PublishFragment() {
         mcManager = MillicastManager.getSingleInstance();
@@ -65,37 +72,49 @@ public class PublishFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        linearLayout = view.findViewById(R.id.linear_layout_pub_1_0);
-        textView = view.findViewById(R.id.textViewPub);
-
-        switchDirection = view.findViewById(R.id.switchDirectionPub);
-        buttonCamera = view.findViewById(R.id.buttonCamera);
-        buttonResolution = view.findViewById(R.id.buttonResolution);
-        buttonAudioCodec = view.findViewById(R.id.buttonCodecAudio);
-        buttonVideoCodec = view.findViewById(R.id.buttonCodecVideo);
-        buttonPublish = view.findViewById(R.id.buttonPublish);
-        buttonCapture = view.findViewById(R.id.buttonCapture);
-        buttonAudio = view.findViewById(R.id.button_audio_pub);
-        buttonVideo = view.findViewById(R.id.button_video_pub);
-
-        // Set static button actions
-        linearLayout.setOnClickListener(this::toggleScale);
-        switchDirection.setOnCheckedChangeListener(this::toggleAscend);
-        switchDirection.setChecked(ascending);
-        buttonCamera.setOnClickListener(this::toggleCamera);
-        buttonResolution.setOnClickListener(this::toggleResolution);
-        buttonAudioCodec.setOnClickListener(viewButton -> toggleCodec(viewButton, true));
-        buttonVideoCodec.setOnClickListener(viewButton -> toggleCodec(viewButton, false));
-        buttonAudio.setOnClickListener(this::toggleAudio);
-        buttonVideo.setOnClickListener(this::toggleVideo);
-
         if (savedInstanceState == null) {
             // Will only lock if it's the first time.
             mcManager.setCameraLock(true);
             if (mcManager.isRicohTheta(CURRENT)) {
                 mcManager.overrideBWE(40000000);
             }
+        } else {
+            conVisible = savedInstanceState.getBoolean(keyConVisible);
         }
+
+        linearLayoutVideo = view.findViewById(R.id.linear_layout_video_pub);
+        linearLayoutCon = view.findViewById(R.id.linear_layout_con_pub);
+        textView = view.findViewById(R.id.textViewPub);
+
+        switchDirection = view.findViewById(R.id.switchDirectionPub);
+
+        buttonRefresh = view.findViewById(R.id.button_refresh_pub);
+        buttonAudioSrc = view.findViewById(R.id.button_audio_src);
+        buttonVideoSrc = view.findViewById(R.id.button_video_src);
+        buttonResolution = view.findViewById(R.id.buttonResolution);
+        buttonCapture = view.findViewById(R.id.buttonCapture);
+        buttonAudio = view.findViewById(R.id.button_audio_pub);
+        buttonVideo = view.findViewById(R.id.button_video_pub);
+        buttonMirror = view.findViewById(R.id.button_mirror);
+        buttonScale = view.findViewById(R.id.button_scale);
+        buttonAudioCodec = view.findViewById(R.id.buttonCodecAudio);
+        buttonVideoCodec = view.findViewById(R.id.buttonCodecVideo);
+        buttonPublish = view.findViewById(R.id.buttonPublish);
+
+        // Set static button actions
+        linearLayoutVideo.setOnClickListener(this::toggleCon);
+        switchDirection.setOnCheckedChangeListener(this::toggleAscend);
+        switchDirection.setChecked(ascending);
+        buttonRefresh.setOnClickListener(this::refreshMediaSources);
+        buttonAudioSrc.setOnClickListener(this::toggleAudioSrc);
+        buttonVideoSrc.setOnClickListener(this::toggleVideoSrc);
+        buttonResolution.setOnClickListener(this::toggleResolution);
+        buttonAudio.setOnClickListener(this::toggleAudio);
+        buttonVideo.setOnClickListener(this::toggleVideo);
+        buttonMirror.setOnClickListener(this::toggleMirror);
+        buttonScale.setOnClickListener(this::toggleScale);
+        buttonAudioCodec.setOnClickListener(viewButton -> toggleCodec(viewButton, true));
+        buttonVideoCodec.setOnClickListener(viewButton -> toggleCodec(viewButton, false));
     }
 
     @Override
@@ -107,12 +126,13 @@ public class PublishFragment extends Fragment {
 
     @Override
     public void onPause() {
-        Utils.stopDisplayVideo(linearLayout, TAG);
+        Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         super.onPause();
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
+        outState.putBoolean(keyConVisible, conVisible);
         super.onSaveInstanceState(outState);
     }
 
@@ -121,59 +141,42 @@ public class PublishFragment extends Fragment {
         super.onDestroy();
     }
 
-
-    void onStartCaptureClicked(View captureButton) {
-        Log.d(TAG, "Start Capture clicked.");
-        mcManager.startAudioVideoCapture();
-        Log.d(TAG, "Started media capture.");
-        displayPubVideo();
-        Log.d(TAG, "Started display video.");
-        setUI();
-    }
-
-    private void displayPubVideo() {
-        String tag = "[displayPubVideo] ";
-        // Display video if not already displayed.
-        if (linearLayout.getChildCount() == 0) {
-            VideoRenderer pubRenderer = mcManager.getPubRenderer();
-            // Ensure our renderer is not attached to another parent view.
-            Utils.removeFromParentView(pubRenderer, TAG);
-            // Finally, add our renderer to our frame layout.
-            linearLayout.addView(pubRenderer);
-            logD(TAG, tag + "Added renderer for display.");
-        } else {
-            logD(TAG, tag + "Already displaying renderer.");
-        }
-    }
-
-    private void onStopCaptureClicked(View view) {
-        Log.d(TAG, "Stop Capture clicked.");
-        mcManager.stopAudioVideoCapture();
-        Log.d(TAG, "Stopped media capture.");
-        Utils.stopDisplayVideo(linearLayout, TAG);
-        setUI();
-    }
-
-    private void toggleAscend(CompoundButton buttonView, boolean isChecked) {
-        if (isChecked) {
-            ascending = true;
-            buttonView.setText("->");
-        } else {
-            ascending = false;
-            buttonView.setText("<-");
-        }
-    }
+    //**********************************************************************************************
+    // Select/Switch videoSource, capability.
+    //**********************************************************************************************
 
     /**
-     * Switch camera to the next one in the list of VideoSource.
+     * Switch audio source to the next one in the list of VideoSource.
      *
      * @param view
      */
-    private void toggleCamera(View view) {
+    private void toggleAudioSrc(View view) {
+        String logTag = "[toggle][Source][Audio] ";
+        String error = mcManager.switchAudioSource(ascending);
+        if (error != null) {
+            Utils.makeSnackbar(logTag, error, this);
+        } else {
+            Utils.makeSnackbar(logTag, "OK. " + mcManager.getAudioSourceName(), this);
+        }
+        setUI();
+    }
+
+    /**
+     * Switch video source to the next one in the list of VideoSource.
+     *
+     * @param view
+     */
+    private void toggleVideoSrc(View view) {
+        String logTag = "[toggle][Source][Video] ";
         try {
-            mcManager.switchVideoSource(ascending);
+            String error = mcManager.switchVideoSource(ascending);
+            if (error != null) {
+                Utils.makeSnackbar(logTag, error, this);
+            } else {
+                Utils.makeSnackbar(logTag, "OK. " + mcManager.getVideoSourceName(), this);
+            }
         } catch (IllegalStateException e) {
-            logD(TAG, "[toggleCamera] Only switched selected camera. " +
+            logD(TAG, logTag + "Only switched selected camera. " +
                     "No camera is actually capturing now.");
         }
         setUI();
@@ -185,28 +188,44 @@ public class PublishFragment extends Fragment {
      * @param view
      */
     private void toggleResolution(View view) {
+        String logTag = "[toggle][Resolution] ";
         try {
             mcManager.switchCapability(ascending);
+            Utils.makeSnackbar(logTag, "OK. " + mcManager.getCapabilityName(), this);
         } catch (IllegalStateException e) {
-            logD(TAG, "[toggle][Resolution] Failed! Error:" + e + "");
+            logD(TAG, logTag + "Failed! Error:" + e + "");
         }
         setUI();
     }
 
-    /**
-     * Switch codec to the next one in the list of Codecs.
-     *
-     * @param view
-     * @param isAudio
-     */
-    private void toggleCodec(View view, boolean isAudio) {
-        try {
-            mcManager.switchCodec(ascending, isAudio);
-        } catch (IllegalStateException e) {
-            logD(TAG, "[toggle][Codec] Failed! Error:" + e + "");
-        }
+    //**********************************************************************************************
+    // Capture
+    //**********************************************************************************************
+
+    void refreshMediaSources(View view){
+        mcManager.refreshMediaLists();
+    }
+
+    void onStartCaptureClicked(View captureButton) {
+        Log.d(TAG, "Start Capture clicked.");
+        displayPubVideo();
+        mcManager.startAudioVideoCapture();
+        Log.d(TAG, "Started media capture.");
+        Log.d(TAG, "Started display video.");
         setUI();
     }
+
+    private void onStopCaptureClicked(View view) {
+        Log.d(TAG, "Stop Capture clicked.");
+        mcManager.stopAudioVideoCapture();
+        Log.d(TAG, "Stopped media capture.");
+        Utils.stopDisplayVideo(linearLayoutVideo, TAG);
+        setUI();
+    }
+
+    //**********************************************************************************************
+    // Mute / unmute audio / video.
+    //**********************************************************************************************
 
     /**
      * Mute or unmute audio by switching audio state to the opposite of the current state.
@@ -236,6 +255,25 @@ public class PublishFragment extends Fragment {
         }
     }
 
+    //**********************************************************************************************
+    // Render
+    //**********************************************************************************************
+
+    private void displayPubVideo() {
+        String tag = "[displayPubVideo] ";
+        // Display video if not already displayed.
+        if (linearLayoutVideo.getChildCount() == 0) {
+            VideoRenderer pubRenderer = mcManager.getPubRenderer();
+            // Ensure our renderer is not attached to another parent view.
+            Utils.removeFromParentView(pubRenderer, TAG);
+            // Finally, add our renderer to our frame layout.
+            linearLayoutVideo.addView(pubRenderer);
+            logD(TAG, tag + "Added renderer for display.");
+        } else {
+            logD(TAG, tag + "Already displaying renderer.");
+        }
+    }
+
     /**
      * Set the ScalingType of the current videoRenderer to the next one in the list of
      * {@link RendererCommon.ScalingType}.
@@ -245,8 +283,8 @@ public class PublishFragment extends Fragment {
      */
     private void toggleScale(View view) {
         String logTag = "[Scale][Toggle][Pub] ";
-        String log = logTag;
-        if (linearLayout != null) {
+        String log = "";
+        if (linearLayoutVideo != null) {
             RendererCommon.ScalingType type = mcManager.switchScaling(ascending, true);
             if (type != null) {
                 log += "Switched to " + type + ".";
@@ -256,8 +294,37 @@ public class PublishFragment extends Fragment {
         } else {
             log += "Failed! linearLayout not available!";
         }
-        makeSnackbar(log, this);
+        makeSnackbar(logTag, log, this);
+        setUI();
     }
+
+    /**
+     * Mirror the rendered video locally.
+     */
+    private void toggleMirror(View view) {
+        String logTag = "[Mirror][Pub] ";
+        String log;
+        if (linearLayoutVideo != null) {
+            mcManager.switchMirror(true);
+        }
+        log = mcManager.isPubMirrored() + ".";
+        makeSnackbar(logTag, log, this);
+        setUI();
+    }
+
+    private void setButtonMirrorText() {
+        String mirror = "Mirror:";
+        if(mcManager.isPubMirrored()){
+            mirror += "T";
+        } else {
+            mirror += "F";
+        }
+        buttonMirror.setText(mirror);
+    }
+
+    //**********************************************************************************************
+    // Publish
+    //**********************************************************************************************
 
     private void onStartPublishClicked(View view) {
         Log.d(TAG, "Start Publish clicked.");
@@ -272,6 +339,70 @@ public class PublishFragment extends Fragment {
     }
 
     /**
+     * Switch codec to the next one in the list of Codecs.
+     *
+     * @param view
+     * @param isAudio
+     */
+    private void toggleCodec(View view, boolean isAudio) {
+        try {
+            mcManager.switchCodec(ascending, isAudio);
+        } catch (IllegalStateException e) {
+            logD(TAG, "[toggle][Codec] Failed! Error:" + e + "");
+        }
+        setUI();
+    }
+
+    //**********************************************************************************************
+    // UI Control
+    //**********************************************************************************************
+
+    /**
+     * Toggle the visibility of UI controls.
+     *
+     * @param view
+     */
+    private void toggleCon(View view) {
+        if (linearLayoutCon == null) {
+            return;
+        }
+        conVisible = !conVisible;
+        displayCon();
+    }
+
+    /**
+     * Set the UI controls to visible or not depending on {@link #conVisible}.
+     * The current scaling of the videoView will be applied again.
+     */
+    private void displayCon() {
+        int visibility;
+        if (conVisible) {
+            visibility = View.VISIBLE;
+        } else {
+            visibility = View.GONE;
+        }
+        linearLayoutCon.setVisibility(visibility);
+        mcManager.applyScaling(true);
+    }
+
+    /**
+     * Switch the direction of cycling through indices, for controls that
+     * allow switching to the next index.
+     *
+     * @param buttonView
+     * @param isChecked
+     */
+    private void toggleAscend(CompoundButton buttonView, boolean isChecked) {
+        if (isChecked) {
+            ascending = true;
+            buttonView.setText("->");
+        } else {
+            ascending = false;
+            buttonView.setText("<-");
+        }
+    }
+
+    /**
      * Set the states of UIs, including capture and publish buttons,
      * based on current capture and publish states.
      * Capture state:
@@ -282,15 +413,19 @@ public class PublishFragment extends Fragment {
      */
     void setUI() {
 
-        if (buttonCapture == null || buttonPublish == null ||
-                buttonCamera == null || buttonResolution == null || buttonAudioCodec == null || buttonVideoCodec == null) {
+        if (this.getView() == null) {
             return;
         }
 
+        displayCon();
+
         textView.setText("Token: " + mcManager.getPublishingToken(CURRENT) +
                 "\nStream: " + mcManager.getStreamNamePub(CURRENT));
-        buttonCamera.setText(mcManager.getVideoSourceName());
+        buttonAudioSrc.setText(mcManager.getAudioSourceName());
+        buttonVideoSrc.setText(mcManager.getVideoSourceName());
         buttonResolution.setText(mcManager.getCapabilityName());
+        buttonScale.setText(mcManager.getScalingName(true));
+        setButtonMirrorText();
         buttonAudioCodec.setText(mcManager.getCodecName(true));
         buttonVideoCodec.setText(mcManager.getCodecName(false));
 
@@ -304,6 +439,7 @@ public class PublishFragment extends Fragment {
         }
 
         if (canChangeCapture) {
+            buttonAudioSrc.setEnabled(true);
             buttonAudioCodec.setEnabled(true);
             buttonVideoCodec.setEnabled(true);
             switch (mcManager.getCapState()) {
@@ -326,6 +462,7 @@ public class PublishFragment extends Fragment {
                     break;
             }
         } else {
+            buttonAudioSrc.setEnabled(false);
             buttonAudioCodec.setEnabled(false);
             buttonVideoCodec.setEnabled(false);
             buttonCapture.setEnabled(false);

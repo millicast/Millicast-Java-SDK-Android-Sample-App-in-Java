@@ -27,7 +27,7 @@ public class PubListener implements Publisher.Listener {
     public void onPublishing() {
         mcManager.setPubState(PUBLISHING);
         setUI();
-        makeSnackbar(logTag + "Publishing", publishFragment);
+        makeSnackbar(logTag, "Publishing", publishFragment);
     }
 
     @Override
@@ -35,13 +35,13 @@ public class PubListener implements Publisher.Listener {
         mcManager.setPubState(CONNECTED);
         mcManager.enablePubStats(1000);
         setUI();
-        makeSnackbar(logTag + "Connected", publishFragment);
+        makeSnackbar(logTag, "Connected", publishFragment);
         mcManager.startPublish();
     }
 
     @Override
     public void onConnectionError(String reason) {
-        makeSnackbar(logTag + reason, publishFragment);
+        makeSnackbar(logTag, reason, publishFragment);
         mcManager.setPubState(DISCONNECTED);
         setUI();
     }

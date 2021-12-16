@@ -265,12 +265,12 @@ public class Utils {
         return value;
     }
 
-    public static void makeSnackbar(String msg, Fragment fragment) {
+    public static void makeSnackbar(String logTag, String msg, Fragment fragment) {
         MillicastManager.getSingleInstance().getMainActivity().runOnUiThread(() -> {
-            logD(TAG, msg);
+            logD(TAG, logTag + msg);
             if (fragment == null) {
                 logD(TAG, "[Utils][Snackbar] Failed! Fragment not available. " +
-                        "Only logging: " + msg);
+                        "Only logging.");
                 return;
             }
             View view = fragment.getView();
@@ -278,7 +278,7 @@ public class Utils {
                 Snackbar snackbar = Snackbar.make(view, msg, Snackbar.LENGTH_SHORT);
                 View snackbarView = snackbar.getView();
                 CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) snackbarView.getLayoutParams();
-                params.gravity = Gravity.CENTER;
+                params.gravity = Gravity.TOP;
                 params.width = WRAP_CONTENT;
                 snackbarView.setLayoutParams(params);
                 TextView tv = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
@@ -288,7 +288,7 @@ public class Utils {
                 snackbar.setAction("Action", null).show();
             } else {
                 logD(TAG, "[Utils][Snackbar] Failed! View or parent not available. " +
-                        "Only logging: " + msg);
+                        "Only logging.");
             }
         });
     }

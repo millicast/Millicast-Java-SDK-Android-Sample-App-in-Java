@@ -379,8 +379,7 @@ public class SetMcFragment extends Fragment {
                 log = "No change.";
             }
         }
-        Utils.makeSnackbar(log, this);
-        logD(TAG, logTag + log);
+        Utils.makeSnackbar(logTag, log, this);
     }
 
     /**

@@ -32,14 +32,17 @@ public class SubscribeFragment extends Fragment {
     public static final String TAG = "SubscribeFragment";
 
     private final MillicastManager mcManager;
-    private LinearLayout linearLayout;
+    private LinearLayout linearLayoutVideo;
+    private LinearLayout linearLayoutCon;
     private TextView textView;
     private Switch switchDirection;
     private Button buttonSubscribe;
     private Button buttonAudio;
     private Button buttonVideo;
+    private Button buttonScale;
 
     private boolean ascending = true;
+    private boolean conVisible = true;
 
     public SubscribeFragment() {
         this.mcManager = MillicastManager.getSingleInstance();
@@ -63,18 +66,21 @@ public class SubscribeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        linearLayout = view.findViewById(R.id.linear_layout_sub_1_0);
+        linearLayoutVideo = view.findViewById(R.id.linear_layout_video_sub);
+        linearLayoutCon = view.findViewById(R.id.linear_layout_con_sub);
         textView = view.findViewById(R.id.text_view_sub);
 
         switchDirection = view.findViewById(R.id.switchDirectionSub);
         buttonSubscribe = view.findViewById(R.id.button_subscribe);
         buttonAudio = view.findViewById(R.id.button_audio_sub);
         buttonVideo = view.findViewById(R.id.button_video_sub);
+        buttonScale = view.findViewById(R.id.button_scale_sub);
 
         // Set static button actions
-        linearLayout.setOnClickListener(this::toggleScale);
+        linearLayoutVideo.setOnClickListener(this::toggleCon);
         switchDirection.setOnCheckedChangeListener(this::toggleAscend);
         switchDirection.setChecked(ascending);
+        buttonScale.setOnClickListener(this::toggleScale);
 
         // Set dynamic button actions
         buttonSubscribe.setOnClickListener(this::onStartSubscribeClicked);
@@ -92,7 +98,7 @@ public class SubscribeFragment extends Fragment {
     @Override
     public void onPause() {
         setAudioMode(false);
-        Utils.stopDisplayVideo(linearLayout, TAG);
+        Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         super.onPause();
     }
 
@@ -106,15 +112,9 @@ public class SubscribeFragment extends Fragment {
         super.onDestroy();
     }
 
-    private void toggleAscend(CompoundButton buttonView, boolean isChecked) {
-        if (isChecked) {
-            ascending = true;
-            buttonView.setText("->");
-        } else {
-            ascending = false;
-            buttonView.setText("<-");
-        }
-    }
+    //**********************************************************************************************
+    // Render
+    //**********************************************************************************************
 
     /**
      * Mute or unmute audio by switching audio state to the opposite of the current state.
@@ -153,8 +153,8 @@ public class SubscribeFragment extends Fragment {
      */
     private void toggleScale(View view) {
         String logTag = "[Scale][Toggle][Sub] ";
-        String log = logTag;
-        if (linearLayout != null) {
+        String log = "";
+        if (linearLayoutVideo != null) {
             RendererCommon.ScalingType type = mcManager.switchScaling(ascending, false);
             if (type != null) {
                 log += "Switched to " + type + ".";
@@ -164,8 +164,13 @@ public class SubscribeFragment extends Fragment {
         } else {
             log += "Failed! linearLayout not available!";
         }
-        makeSnackbar(log, this);
+        makeSnackbar(logTag, log, this);
+        setUI();
     }
+
+    //**********************************************************************************************
+    // Subscribe
+    //**********************************************************************************************
 
     private void onStartSubscribeClicked(View view) {
         Log.d(TAG, "Start Subscribe clicked.");
@@ -178,13 +183,13 @@ public class SubscribeFragment extends Fragment {
         String tag = "[displaySubVideo] ";
 
         // Display video if not already displayed.
-        if (linearLayout.getChildCount() == 0) {
+        if (linearLayoutVideo.getChildCount() == 0) {
             // Get remote video renderer.
             VideoRenderer subRenderer = mcManager.getSubRenderer();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(subRenderer, TAG);
             // Finally, add our renderer to our frame layout.
-            linearLayout.addView(subRenderer);
+            linearLayoutVideo.addView(subRenderer);
             logD(TAG, tag + "Added renderer for display.");
         } else {
             logD(TAG, tag + "Already displaying renderer.");
@@ -194,8 +199,50 @@ public class SubscribeFragment extends Fragment {
     private void onStopSubscribeClicked(View view) {
         Log.d(TAG, "Stop Subscribe clicked.");
         mcManager.stopSubscribe();
-        Utils.stopDisplayVideo(linearLayout, TAG);
+        Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         setUI();
+    }
+
+    //**********************************************************************************************
+    // UI Control
+    //**********************************************************************************************
+
+    /**
+     * Toggle the visibility of UI controls.
+     *
+     * @param view
+     */
+    private void toggleCon(View view) {
+        if (linearLayoutCon == null) {
+            return;
+        }
+        conVisible = !conVisible;
+        displayCon();
+    }
+
+    /**
+     * Set the UI controls to visible or not depending on {@link #conVisible}.
+     * The current scaling of the videoView will be applied again.
+     */
+    private void displayCon() {
+        int visibility;
+        if (conVisible) {
+            visibility = View.VISIBLE;
+        } else {
+            visibility = View.GONE;
+        }
+        linearLayoutCon.setVisibility(visibility);
+        mcManager.applyScaling(true);
+    }
+
+    private void toggleAscend(CompoundButton buttonView, boolean isChecked) {
+        if (isChecked) {
+            ascending = true;
+            buttonView.setText("->");
+        } else {
+            ascending = false;
+            buttonView.setText("<-");
+        }
     }
 
     /**
@@ -222,12 +269,15 @@ public class SubscribeFragment extends Fragment {
      */
     void setUI() {
 
-        if (buttonSubscribe == null) {
+        if (this.getView() == null) {
             return;
         }
 
+        displayCon();
+
         textView.setText("Account: " + mcManager.getAccountId(CURRENT) +
                 " Stream: " + mcManager.getStreamNameSub(CURRENT));
+        buttonScale.setText(mcManager.getScalingName(false));
 
         switch (mcManager.getSubState()) {
             case DISCONNECTED:

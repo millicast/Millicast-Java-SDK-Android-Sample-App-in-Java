@@ -3,92 +3,126 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:textAlignment="gravity"
     tools:context=".SetMediaFragment">
 
-
-    <TextView
-        android:id="@+id/capture_settings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Media capture settings:"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
-
-    <Spinner
-        android:id="@+id/video_source_list"
+    <LinearLayout
+        android:id="@+id/linear_layout_pub_0"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/capture_settings"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <Spinner
-        android:id="@+id/capability_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/video_source_list"/>
+        <TextView
+            android:id="@+id/capture_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Media capture settings"
+            android:textAlignment="center"
+            android:textStyle="bold" />
 
-    <Spinner
-        android:id="@+id/audio_source_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/capability_list"/>
+        <TextView
+            android:id="@+id/video_sources"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Video Sources:" />
 
-    <TextView
-        android:id="@+id/playback_settings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Audio playback device:"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/audio_source_list"/>
+        <Spinner
+            android:id="@+id/video_source_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
-    <Spinner
-        android:id="@+id/audio_playback_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/playback_settings"/>
+        <Spinner
+            android:id="@+id/capability_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
-    <TextView
-        android:id="@+id/publish_settings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Publish settings:"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/audio_playback_list"/>
+        <TextView
+            android:id="@+id/audio_sources"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Audio Sources:" />
 
-    <Spinner
-        android:id="@+id/video_codec_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/publish_settings"/>
+        <Spinner
+            android:id="@+id/audio_source_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
-    <Spinner
-        android:id="@+id/audio_codec_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/video_codec_list"/>
+        <Button
+            android:id="@+id/button_refresh_set"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:autoSizeTextType="uniform"
+            android:text="Refresh Media Sources" />
 
-    <Switch
-        android:id="@+id/ndiVideoOutput"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ndi video output"
-        app:layout_constraintLeft_toRightOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/audio_codec_list"/>
+        <TextView
+            android:id="@+id/publish_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Publish settings"
+            android:textAlignment="center"
+            android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/audio_codecs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Audio codecs:" />
+
+        <Spinner
+            android:id="@+id/audio_codec_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/video_codecs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Video codecs:" />
+
+        <Spinner
+            android:id="@+id/video_codec_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/subscribe_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Subscribe settings"
+            android:textAlignment="center"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/playback_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:text="Audio playback device:" />
+
+        <Spinner
+            android:id="@+id/audio_playback_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Switch
+            android:id="@+id/ndi_output_audio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NDI output - Audio" />
+
+        <Switch
+            android:id="@+id/ndi_output_video"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NDI output - Video" />
+
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
