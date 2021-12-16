@@ -2,7 +2,7 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 
 # Millicast SDK:
 - To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/tags).
-- The recommended SDK version for this SA version is: [1.1.0](https://github.com/millicast/millicast-native-sdk/releases/tag/v1.0.0)
+- As of release, the recommended SDK version for this SA version is: [1.1.1](https://github.com/millicast/millicast-native-sdk/releases/tag/v1.0.0)
 
 # Build the SA
 1. Open the SA in Android Studio (AS).
@@ -24,6 +24,7 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 # Run the SA
 1. Before running the SA, it is recommended to populate the Millicast credentials in the Constants.java file.
     - It is also possible to enter or change the credentials when the SA is running, at the Settings - Millicast page.
+    - When a credential is different from what is currently applied in the SDK, it is highlighted in grey.
 1. On AS, click on the "Run 'app'" button to run the SA on the device of your choice.
 
 # Provide required App permissions
@@ -38,16 +39,19 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 1. If desired, tap on the camera description and/or resolution description to cycle through the available cameras and resolutions.
     - Toggle the switch labelled "->" or "<-" to change the direction of cycle.
     - For more media related settings, you may go to the Settings - Media page.
-1. Click "START CAPTURE" to start capturing on the selected camera, at the selected resolution.
+1. Tap on REFRESH to update the currently available list of audio and video sources.
+1. Tap "START CAPTURE" to start capturing on the selected camera, at the selected resolution.
     - When the capturing is successful, the local video can be seen on the screen.
-1. If desired to switch to another camera, click on the button showing the selected camera.
+1. If desired to switch to another camera, tap on the button showing the selected camera.
 1. To mute/unmute audio or video, toggle the respective buttons.
     - This affects both the captured/published media, as well as the subscribed media on Subscriber(s).
-1. Click "START PUBLISH" to publish the captured video to Millicast.
+1. Tap on Mirror to toggle the mirroring of the local video view.
+1. Tap "START PUBLISH" to publish the captured video to Millicast.
 1. To stop publishing, click "STOP PUBLISH".
 
 # To subscribe using the SA
 1. Ensure the subscribing credentials are populated.
+1. If desired to show subscribed audio / video via NDI outputs, go to Settings - Media and select "ndi output" (Audio playback device), and toggle switch "NDI output - Video" to on.
 1. Go to the Subscribe page.
 1. Click "START SUBSCRIBE" to start subscribing to the Millicast stream specified at the Settings - Millicast page.
 1. To mute/unmute audio or video, toggle the respective buttons.
@@ -55,4 +59,8 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 1. To stop subscribing, click "STOP SUBSCRIBE".
 
 # Miscellaneous
-1. To adjust the video rendering scaling, tap on the rendered video to cycle between different scaling.
+1. Tap on video view to hide/unhide UI controls.
+1. Tap on the scale button (appears by default as "FIT") to scale the local rendering of video, cycling between using 3 possible scaling options.
+1. The local video view of Publisher is mirrored by default for front facing camera(s).
+    - This is to acheive a more natural mirror like effect for the Publisher locally.
+    - Mirroring effect is only local and does not affect remote view.
