@@ -1,7 +1,7 @@
 The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be used in an Android project to publish/subscribe to/from the Millicast Platform.
 
 # Millicast SDK:
-- To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/tags).
+- To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/releases).
 
 # Build the SA
 1. Open the SA in Android Studio (AS).
