@@ -2,7 +2,6 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 
 # Millicast SDK:
 - To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/tags).
-- As of release, the recommended SDK version for this SA version is: [1.1.1](https://github.com/millicast/millicast-native-sdk/releases/tag/v1.0.0)
 
 # Build the SA
 1. Open the SA in Android Studio (AS).
