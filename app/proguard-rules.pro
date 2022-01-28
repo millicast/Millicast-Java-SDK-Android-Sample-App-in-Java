@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# R8 rules required to use the Millicast SDK.
+-keep class org.webrtc.** { *; }
+-keep class com.millicast.** { *; }
+
+# Debug
+#-printconfiguration ./full-r8-config.txt
+#-printusage ./removed.txt
+#-printseeds ./kept.txt
+#-dontobfuscate
+#-keepattributes SourceFile,LineNumberTable

@@ -2,7 +2,20 @@ plugins {
     id 'com.android.application'
 }
 
+// Load values from SA properties file.
+def propsFile = rootProject.file('sa.properties')
+def props = new Properties()
+props.load(new FileInputStream(propsFile))
+
 android {
+    signingConfigs {
+        release {
+            storeFile file(props['keyStoreFile'])
+            storePassword props['keyStorePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+    }
     compileSdkVersion 28
 
     defaultConfig {
@@ -18,8 +31,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {
@@ -43,3 +58,6 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 }
+
+// Log the version of R8 used.
+println("Using R8: ${com.android.tools.r8.Version.getVersionString()}")
