@@ -1,27 +1,84 @@
 The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be used in an Android project to publish/subscribe to/from the Millicast Platform.
 
 # Millicast SDK:
-- To use this SA, download an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/releases).
+- To use this SA, select an appropriate Millicast SDK from our list of [releases](https://github.com/millicast/millicast-native-sdk/releases).
 
-# Build the SA
-1. Open the SA in Android Studio (AS).
-    1. In AS, choose to "Open an Existing Project".
-    1. Select the SA folder and open it.
-1. Add the Millicast Java SDK
-    1. On your filesystem, place your Millicast SDK in the project folder "MillicastSDK" (already created).
-        - This is the default folder for our MillicastSDK Module.
-    1. In AS, at the Project window (on the left), select the Android view (top left of panel) if not already selected.
-    1. Select and open the Gradle Script (build.gradle) of the Module android-app.MillicastSDK.
-        - This file specifies the configuration for adding the Millicast SDK, including it's file name.
-        - In the existing line "artifacts.add("default", file('MillicastSDK.aar'))",
-            - "MillicastSDK.aar" is the filename of your MillicastSDK.
-            - Please update this name based on the actual filename of your MillicastSDK.
-1. Perform a Gradle Sync to load the Millicast SDK.
+# Opening the SA
+1. The SA can be opened with Android Studio (AS).
+1. In AS, choose to "Open an Existing Project".
+1. Select the SA folder and open it.
+
+# Install the Millicast Java SDK
+## Ways to add the SDK
+- There are currently two ways to add the Millicast Java SDK, as shown below.
+- Proceed with **only one** of these ways at any one time.
+
+### Add SDK AAR file manually.
+1. Download the selected version of SDK file from the list of release indicated above.
+1. On your filesystem, place your Millicast SDK in the project folder "***MillicastSDK***" (already created).
+    - This is the default folder for our MillicastSDK Module.
+1. In AS, at the Project window (on the left), select the Android view (top left of panel) if not already selected.
+1. Select and open the Gradle Script (***MillicastSDK/build.gradle***) of the Module MillicastSDK.
+    - This file specifies the configuration for adding the Millicast SDK, including it's file name.
+    - Edit the following line if required:
+    `artifacts.add("default", file('MillicastSDK.aar'))`
+    - In this line:
+        - "MillicastSDK.aar" is the filename of your MillicastSDK.
+        - Please update this name based on the actual filename of your MillicastSDK.
+
+### Add the SDK via Maven from GitHub Packages
+#### SA usage
+- The required gradle settings listed below are mainly for reference, as they have already been set up in the SA.
+- The only action required to use the SA is to provide the credentials of a working GitHub account in the ***sa.properties*** file:
+    - `githubUsername`
+        - The **username** of the GitHub account to use.
+    - `githubPat`
+        - GitHub user's **personal access token (PAT)** with a `read:packages` scope.
+- Please refer to the ***sa.properties*** file for more details.
+#### Gradle settings
+- The following have already been set up in the SA.
+- If you wish to add the SDK to your own app, you can follow the following steps.
+- Maven details:
+    - Url: https://maven.pkg.github.com/millicast/maven
+    - Group ID: com.millicast
+    - Artifact ID: millicast-sdk-android
+- In ***app/build.gradle***, add:
+    - A maven repository for the Millicast Maven on GitHub Packages
+        - For example:
+            ``` gradle
+            repositories {
+                // Millicast SDK via Maven from GitHub Packages
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/millicast/maven")
+                    credentials {
+                        username = githubUsername
+                        password = githubPat
+                    }
+                }
+            }
+            ```
+        - Where `githubUsername` and `githubPat` are those mentioned in the previous section.
+    - A dependency line to use the Millicast SDK
+        - To use the latest version of Millicast SDK:
+            ``` gradle
+            dependencies {
+                implementation 'com.millicast:millicast-sdk-android'
+            }
+            ```
+        - To use a specific version of Millicast SDK, for example 1.1.3:
+            ``` gradle
+            dependencies {
+                implementation 'com.millicast:millicast-sdk-android:1.1.3'
+            }
+            ```
+## Load the SDK
+- Perform a Gradle Sync to load the Millicast SDK.
     - On AS, click on the button "Sync Project with Gradle Files".
-    - If not properly synced, AS may show numerous errors regarding unresolved symbols and methods from the Millicast SDK.
+- If not properly synced, AS may show numerous errors regarding unresolved symbols and methods from the Millicast SDK.
 
 # Run the SA
-1. Before running the SA, it is recommended to populate the Millicast credentials in the Constants.java file.
+1. Before running the SA, it is recommended to populate the Millicast credentials in the ***Constants.java*** file.
     - It is also possible to enter or change the credentials when the SA is running, at the Settings - Millicast page.
     - When a credential is different from what is currently applied in the SDK, it is highlighted in grey.
 1. On AS, click on the "Run 'app'" button to run the SA on the device of your choice.
