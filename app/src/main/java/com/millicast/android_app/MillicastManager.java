@@ -48,10 +48,10 @@ public class MillicastManager {
     public static String keyAccountId = "ACCOUNT_ID";
     public static String keyStreamNamePub = "STREAM_NAME_PUB";
     public static String keyStreamNameSub = "STREAM_NAME_SUB";
-    public static String keyPublishingToken = "PUBLISH_TOKEN_PUB";
-    public static String keySubscribeToken = "PUBLISH_TOKEN_SUB";
-    public static String keyPublishApiUrl = "PUBLISH_URL";
-    public static String keySubscribeApiUrl = "SUBSCRIBE_URL";
+    public static String keyPublishToken = "TOKEN_PUB";
+    public static String keySubscribeToken = "TOKEN_SUB";
+    public static String keyPublishApiUrl = "URL_PUB";
+    public static String keySubscribeApiUrl = "URL_SUB";
     public static String keyRicohTheta = "RICOH_THETA";
     public static String keyConVisible = "CON_VISIBLE";
 
@@ -117,7 +117,7 @@ public class MillicastManager {
     private String accountId = ACCOUNT_ID;
     private String streamNamePub = STREAM_NAME_PUB;
     private String streamNameSub = STREAM_NAME_SUB;
-    private String publishingToken = PUBLISH_TOKEN;
+    private String publishToken = PUBLISH_TOKEN;
     private String subscribeToken = SUBSCRIBE_TOKEN;
     private String publishApiUrl = PUBLISH_URL;
     private String subscribeApiUrl = SUBSCRIBE_URL;
@@ -240,7 +240,7 @@ public class MillicastManager {
         setAccountId(Utils.getSaved(keyAccountId, ACCOUNT_ID, context), false);
         setStreamNamePub(Utils.getSaved(keyStreamNamePub, STREAM_NAME_PUB, context), false);
         setStreamNameSub(Utils.getSaved(keyStreamNameSub, STREAM_NAME_SUB, context), false);
-        setPublishingToken(Utils.getSaved(keyPublishingToken, PUBLISH_TOKEN, context), false);
+        setPublishToken(Utils.getSaved(keyPublishToken, PUBLISH_TOKEN, context), false);
         setSubscribeToken(Utils.getSaved(keySubscribeToken, SUBSCRIBE_TOKEN, context), false);
         setPublishApiUrl(Utils.getSaved(keyPublishApiUrl, PUBLISH_URL, context), false);
         setSubscribeApiUrl(Utils.getSaved(keySubscribeApiUrl, SUBSCRIBE_URL, context), false);
@@ -303,20 +303,20 @@ public class MillicastManager {
         return true;
     }
 
-    public String getPublishingToken(Source source) {
-        return Utils.getProperty(source, publishingToken, PUBLISH_TOKEN, keyPublishingToken, context);
+    public String getPublishToken(Source source) {
+        return Utils.getProperty(source, publishToken, PUBLISH_TOKEN, keyPublishToken, context);
     }
 
-    public boolean setPublishingToken(String newValue, boolean save) {
+    public boolean setPublishToken(String newValue, boolean save) {
         String logTag = "[PublishingToken][Set] ";
         if (pubState != PublisherState.DISCONNECTED) {
             logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
             return false;
         }
         if (save) {
-            Utils.saveValue(keyPublishingToken, publishingToken, newValue, logTag, context);
+            Utils.saveValue(keyPublishToken, publishToken, newValue, logTag, context);
         }
-        publishingToken = newValue;
+        publishToken = newValue;
         return true;
     }
 
@@ -456,6 +456,18 @@ public class MillicastManager {
 
         audioPlaybackStart();
 
+        // [WA] ------------------------------------------------------------------------------------
+        // This a workaround for DIOS-149 where credentials are not set if a Subscribe Token
+        // is provided. This line can be removed once DIOS-149 is fixed.
+        this.subscriber.setCredentials(creds);
+        // [WA] ------------------------------------------------------------------------------------
+
+        // If a Subscribe Token is required, add it.
+        // If it is not required, do not add it.
+        String subscribeToken = getSubscribeToken(CURRENT);
+        if (subscribeToken != null && !subscribeToken.isEmpty()) {
+            creds.token = Optional.of(subscribeToken);
+        }
         this.subscriber.setCredentials(creds);
         this.subscriber.setOptions(subOptions);
         this.subscriber.connect();
@@ -1819,7 +1831,7 @@ public class MillicastManager {
         Publisher.Credential creds = publisher.getCredentials();
         creds.apiUrl = getPublishApiUrl(CURRENT);
         creds.streamName = getStreamNamePub(CURRENT);
-        creds.token = getPublishingToken(CURRENT);
+        creds.token = getPublishToken(CURRENT);
 
         publisher.setCredentials(creds);
         publisher.setOptions(pubOptions);

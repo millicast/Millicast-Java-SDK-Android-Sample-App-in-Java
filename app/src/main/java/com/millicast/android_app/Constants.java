@@ -7,7 +7,8 @@ public final class Constants {
     public static final String STREAM_NAME_PUB = "STREAM NAME PUB";
     public static final String STREAM_NAME_SUB = "STREAM NAME SUB";
     public static final String PUBLISH_TOKEN = "PUBLISHING TOKEN";
-    public static final String SUBSCRIBE_TOKEN = "Default subscribe token";
+    // If a Subscribe Token is not required, set it as an empty string.
+    public static final String SUBSCRIBE_TOKEN = "";
     public static final String PUBLISH_URL = "https://director.millicast.com/api/director/publish";
     public static final String SUBSCRIBE_URL = "https://director.millicast.com/api/director/subscribe";
     

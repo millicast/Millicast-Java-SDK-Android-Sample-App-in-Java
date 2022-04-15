@@ -31,6 +31,7 @@
     <string name="account_id">Account id</string>
     <string name="stream_name_subscribe">Stream name (Subscribe)</string>
     <string name="publish_token">Publish token</string>
+    <string name="subscribe_token">Subscribe token</string>
     <string name="publish_url">publish url</string>
     <string name="subscribe_url">subscribe url</string>
     <string name="ricoh_theta">Ricoh Theta</string>

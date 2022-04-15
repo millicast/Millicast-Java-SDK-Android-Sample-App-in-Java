@@ -38,17 +38,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ricoh_theta"
-                app:layout_constraintBottom_toTopOf="@+id/account_id"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@+id/account_id" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/account_id"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/account_id"
-                app:layout_constraintBottom_toTopOf="@+id/stream_name_pub"
                 app:layout_constraintTop_toBottomOf="@+id/switchRicohTheta"
+                app:layout_constraintBottom_toTopOf="@+id/stream_name_pub"
                 tools:layout_editor_absoluteX="1dp" />
 
             <com.google.android.material.textfield.TextInputEditText
@@ -56,16 +56,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/stream_name_publish"
-                app:layout_constraintBottom_toTopOf="@+id/stream_name_sub"
-                app:layout_constraintTop_toBottomOf="@+id/account_id" />
+                app:layout_constraintTop_toBottomOf="@+id/account_id"
+                app:layout_constraintBottom_toTopOf="@+id/stream_name_sub" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/stream_name_sub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/stream_name_subscribe"
-                app:layout_constraintBottom_toTopOf="@+id/publish_token"
                 app:layout_constraintTop_toBottomOf="@+id/stream_name_pub"
+                app:layout_constraintBottom_toTopOf="@+id/publish_token"
                 tools:layout_editor_absoluteX="0dp" />
 
             <com.google.android.material.textfield.TextInputEditText
@@ -73,32 +73,40 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/publish_token"
-                app:layout_constraintBottom_toTopOf="@+id/publish_url"
-                app:layout_constraintTop_toBottomOf="@+id/stream_name_sub" />
+                app:layout_constraintTop_toBottomOf="@+id/stream_name_sub"
+                app:layout_constraintBottom_toTopOf="@+id/subscribe_token" />
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/subscribe_token"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/subscribe_token"
+                app:layout_constraintTop_toBottomOf="@+id/publish_token"
+                app:layout_constraintBottom_toTopOf="@+id/publish_url" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/publish_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/publish_url"
-                app:layout_constraintBottom_toTopOf="@+id/subscribe_url"
-                app:layout_constraintTop_toBottomOf="@+id/publish_token" />
+                app:layout_constraintTop_toBottomOf="@+id/subscribe_token"
+                app:layout_constraintBottom_toTopOf="@+id/subscribe_url" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/subscribe_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/subscribe_url"
-                app:layout_constraintBottom_toTopOf="@id/linearLayout1"
-                app:layout_constraintTop_toBottomOf="@+id/publish_url" />
+                app:layout_constraintTop_toBottomOf="@+id/publish_url"
+                app:layout_constraintBottom_toTopOf="@id/linearLayout1" />
 
             <LinearLayout
                 android:id="@+id/linearLayout1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/subscribe_url">
+                app:layout_constraintTop_toBottomOf="@+id/subscribe_url"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <LinearLayout
                     android:id="@+id/linearLayout2"
