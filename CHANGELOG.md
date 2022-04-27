@@ -1,13 +1,25 @@
 # Release Notes
 This file documents the release notes for each version of the Millicast Java SDK Android Sample App (SA) in Java.
 SA APIs refer to public methods provided by the SA class, MillicastManager.
+
+## 1.1.2 (2022-04-27)
+Upgraded to use SDK 1.1.4, fixed Subscribe Token usage.
+### Major changes
+- Upgraded to new SDK 1.1.4.
+### Fixed
+- Fixed Subscribe Token usage.
+  - Added UI and logic for Subscribe Token usage.
+  - Added work around for current SDK issue where credentials are not set when a Subscribe Token was provided.
+### Known issues
+- As before.
+
 ## 1.1.1 (2022-02-14)
 Upgraded to use SDK 1.1.3, added Maven installation of SDK, release configs and R8 rules.
 ### Major changes
 - Upgraded to new SDK 1.1.3.
 - Added Maven installation of SDK.
-    - Both the existing manual addition of AAR and the Maven installation of SDK are supported.
-    - Refer to ***README.md*** for usage details.
+  - Both the existing manual addition of AAR and the Maven installation of SDK are supported.
+  - Refer to ***README.md*** for usage details.
 - Added release signing config and build type in ***app/build.gradle***.
 - Added ***sa.properties*** file where various SA related setting can be added and used in the ***build.gradle*** files.
 - Added R8 rules in ***proguard-rules.pro*** that enables SDK to work even after R8 minify and resource shrinking.

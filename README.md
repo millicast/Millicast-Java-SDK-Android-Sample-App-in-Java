@@ -115,8 +115,14 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
 1. To stop subscribing, click "STOP SUBSCRIBE".
 
 # Miscellaneous
-1. Tap on video view to hide/unhide UI controls.
-1. Tap on the scale button (appears by default as "FIT") to scale the local rendering of video, cycling between using 3 possible scaling options.
-1. The local video view of Publisher is mirrored by default for front facing camera(s).
-    - This is to acheive a more natural mirror like effect for the Publisher locally.
-    - Mirroring effect is only local and does not affect remote view.
+- Tap on video view to hide/unhide UI controls.
+- Tap on the scale button (appears by default as "FIT") to scale the local rendering of video, cycling between using 3 possible scaling options.
+- The local video view of Publisher is mirrored by default for front facing camera(s).
+  - This is to acheive a more natural mirror like effect for the Publisher locally.
+  - Mirroring effect is only local and does not affect remote view.
+- If the publisher settings requires a secure viewer, a valid Subscriber Token has to be set in the Settings - Millicast page.
+  - If a secured viewer is **not** required:
+    - The following values for the Subscriber Token field are acceptable:
+      - Completely blank (no white spaces).
+      - A valid Subscriber Token.
+    - Any other values will result in failure to connect.
