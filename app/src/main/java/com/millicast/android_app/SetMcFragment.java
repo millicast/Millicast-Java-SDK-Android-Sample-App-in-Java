@@ -23,13 +23,15 @@ import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.MillicastManager.Source.FILE;
 import static com.millicast.android_app.MillicastManager.Source.SAVED;
 import static com.millicast.android_app.MillicastManager.keyAccountId;
-import static com.millicast.android_app.MillicastManager.keyPublishApiUrl;
-import static com.millicast.android_app.MillicastManager.keyPublishToken;
-import static com.millicast.android_app.MillicastManager.keySubscribeToken;
+import static com.millicast.android_app.MillicastManager.keySourceIdPub;
+import static com.millicast.android_app.MillicastManager.keySourceIdPubEnabled;
+import static com.millicast.android_app.MillicastManager.keyUrlPub;
+import static com.millicast.android_app.MillicastManager.keyTokenPub;
+import static com.millicast.android_app.MillicastManager.keyTokenSub;
 import static com.millicast.android_app.MillicastManager.keyRicohTheta;
 import static com.millicast.android_app.MillicastManager.keyStreamNamePub;
 import static com.millicast.android_app.MillicastManager.keyStreamNameSub;
-import static com.millicast.android_app.MillicastManager.keySubscribeApiUrl;
+import static com.millicast.android_app.MillicastManager.keyUrlSub;
 
 public class SetMcFragment extends Fragment {
     public static final String TAG = "SetMcFragment";
@@ -39,18 +41,22 @@ public class SetMcFragment extends Fragment {
     private TextInputEditText editTextAccountId;
     private TextInputEditText editTextStreamNamePub;
     private TextInputEditText editTextStreamNameSub;
-    private TextInputEditText editTextPublishToken;
-    private TextInputEditText editTextSubscribeToken;
-    private TextInputEditText editTextPublishApiUrl;
-    private TextInputEditText editTextSubscribeApiUrl;
+    private TextInputEditText editTextSourceIdPub;
+    private Switch switchSourceIdPubEnabled;
+    private TextInputEditText editTextTokenPub;
+    private TextInputEditText editTextTokenSub;
+    private TextInputEditText editTextUrlPub;
+    private TextInputEditText editTextUrlSub;
     private final AtomicBoolean changedRicohTheta = new AtomicBoolean(false);
     private final AtomicBoolean changedAccountId = new AtomicBoolean(false);
     private final AtomicBoolean changedStreamNamePub = new AtomicBoolean(false);
     private final AtomicBoolean changedStreamNameSub = new AtomicBoolean(false);
-    private final AtomicBoolean changedPublishToken = new AtomicBoolean(false);
-    private final AtomicBoolean changedSubscribeToken = new AtomicBoolean(false);
-    private final AtomicBoolean changedPublishApiUrl = new AtomicBoolean(false);
-    private final AtomicBoolean changedSubscribeApiUrl = new AtomicBoolean(false);
+    private final AtomicBoolean changedSourceIdPub = new AtomicBoolean(false);
+    private final AtomicBoolean changedSourceIdPubEnabled = new AtomicBoolean(false);
+    private final AtomicBoolean changedTokenPub = new AtomicBoolean(false);
+    private final AtomicBoolean changedTokenSub = new AtomicBoolean(false);
+    private final AtomicBoolean changedUrlPub = new AtomicBoolean(false);
+    private final AtomicBoolean changedUrlSub = new AtomicBoolean(false);
     private Button buttonLoadApplied;
     private Button buttonLoadSaved;
     private Button buttonLoadFile;
@@ -77,7 +83,7 @@ public class SetMcFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        switchRicohTheta = view.findViewById(R.id.switchRicohTheta);
+        switchRicohTheta = view.findViewById(R.id.ricoh_theta_switch);
         switchRicohTheta.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -90,30 +96,51 @@ public class SetMcFragment extends Fragment {
         editTextAccountId.setOnFocusChangeListener(createListener(() -> {
             return mcManager.getAccountId(CURRENT);
         }, changedAccountId));
+
         editTextStreamNamePub = view.findViewById(R.id.stream_name_pub);
         editTextStreamNamePub.setOnFocusChangeListener(createListener(() -> {
             return mcManager.getStreamNamePub(CURRENT);
         }, changedStreamNamePub));
+
         editTextStreamNameSub = view.findViewById(R.id.stream_name_sub);
         editTextStreamNameSub.setOnFocusChangeListener(createListener(() -> {
             return mcManager.getStreamNameSub(CURRENT);
         }, changedStreamNameSub));
-        editTextPublishToken = view.findViewById(R.id.publish_token);
-        editTextPublishToken.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getPublishToken(CURRENT);
-        }, changedPublishToken));
-        editTextSubscribeToken = view.findViewById(R.id.subscribe_token);
-        editTextSubscribeToken.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getSubscribeToken(CURRENT);
-        }, changedSubscribeToken));
-        editTextPublishApiUrl = view.findViewById(R.id.publish_url);
-        editTextPublishApiUrl.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getPublishApiUrl(CURRENT);
-        }, changedPublishApiUrl));
-        editTextSubscribeApiUrl = view.findViewById(R.id.subscribe_url);
-        editTextSubscribeApiUrl.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getSubscribeApiUrl(CURRENT);
-        }, changedSubscribeApiUrl));
+
+        editTextSourceIdPub = view.findViewById(R.id.source_id_pub);
+        editTextSourceIdPub.setOnFocusChangeListener(createListener(() -> {
+            return mcManager.getSourceIdPub(CURRENT);
+        }, changedSourceIdPub));
+
+        switchSourceIdPubEnabled = view.findViewById(R.id.source_id_pub_enabled);
+        switchSourceIdPubEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                boolean valueApplied = mcManager.isSourceIdPubEnabled(CURRENT);
+                boolean hasChanged = (valueApplied != isChecked);
+                setMark(switchSourceIdPubEnabled, hasChanged, changedSourceIdPubEnabled);
+            }
+        });
+
+        editTextTokenPub = view.findViewById(R.id.publish_token);
+        editTextTokenPub.setOnFocusChangeListener(createListener(() -> {
+            return mcManager.getTokenPub(CURRENT);
+        }, changedTokenPub));
+
+        editTextTokenSub = view.findViewById(R.id.subscribe_token);
+        editTextTokenSub.setOnFocusChangeListener(createListener(() -> {
+            return mcManager.getTokenSub(CURRENT);
+        }, changedTokenSub));
+
+        editTextUrlPub = view.findViewById(R.id.publish_url);
+        editTextUrlPub.setOnFocusChangeListener(createListener(() -> {
+            return mcManager.getUrlPub(CURRENT);
+        }, changedUrlPub));
+
+        editTextUrlSub = view.findViewById(R.id.subscribe_url);
+        editTextUrlSub.setOnFocusChangeListener(createListener(() -> {
+            return mcManager.getUrlSub(CURRENT);
+        }, changedUrlSub));
 
         buttonLoadApplied = view.findViewById(R.id.button_applied);
         buttonLoadSaved = view.findViewById(R.id.button_saved);
@@ -131,19 +158,19 @@ public class SetMcFragment extends Fragment {
             changedAccountId.set(false);
             changedStreamNamePub.set(false);
             changedStreamNameSub.set(false);
-            changedPublishToken.set(false);
-            changedSubscribeToken.set(false);
-            changedPublishApiUrl.set(false);
-            changedSubscribeApiUrl.set(false);
+            changedTokenPub.set(false);
+            changedTokenSub.set(false);
+            changedUrlPub.set(false);
+            changedUrlSub.set(false);
         } else {
             changedRicohTheta.set(savedInstanceState.getBoolean(keyRicohTheta));
             changedAccountId.set(savedInstanceState.getBoolean(keyAccountId));
             changedStreamNamePub.set(savedInstanceState.getBoolean(keyStreamNamePub));
             changedStreamNameSub.set(savedInstanceState.getBoolean(keyStreamNameSub));
-            changedPublishToken.set(savedInstanceState.getBoolean(keyPublishToken));
-            changedSubscribeToken.set(savedInstanceState.getBoolean(keySubscribeToken));
-            changedPublishApiUrl.set(savedInstanceState.getBoolean(keyPublishApiUrl));
-            changedSubscribeApiUrl.set(savedInstanceState.getBoolean(keySubscribeApiUrl));
+            changedTokenPub.set(savedInstanceState.getBoolean(keyTokenPub));
+            changedTokenSub.set(savedInstanceState.getBoolean(keyTokenSub));
+            changedUrlPub.set(savedInstanceState.getBoolean(keyUrlPub));
+            changedUrlSub.set(savedInstanceState.getBoolean(keyUrlSub));
         }
 
         buttonLoadApplied.setOnClickListener(new View.OnClickListener() {
@@ -194,10 +221,10 @@ public class SetMcFragment extends Fragment {
         outState.putBoolean(keyAccountId, changedAccountId.get());
         outState.putBoolean(keyStreamNamePub, changedStreamNamePub.get());
         outState.putBoolean(keyStreamNameSub, changedStreamNameSub.get());
-        outState.putBoolean(keyPublishToken, changedPublishToken.get());
-        outState.putBoolean(keySubscribeToken, changedSubscribeToken.get());
-        outState.putBoolean(keyPublishApiUrl, changedPublishApiUrl.get());
-        outState.putBoolean(keySubscribeApiUrl, changedSubscribeApiUrl.get());
+        outState.putBoolean(keyTokenPub, changedTokenPub.get());
+        outState.putBoolean(keyTokenSub, changedTokenSub.get());
+        outState.putBoolean(keyUrlPub, changedUrlPub.get());
+        outState.putBoolean(keyUrlSub, changedUrlSub.get());
         super.onSaveInstanceState(outState);
     }
 
@@ -259,14 +286,16 @@ public class SetMcFragment extends Fragment {
      * @param source
      */
     private void loadProps(Source source) {
+        setMarkChange(switchRicohTheta, mcManager.isRicohTheta(CURRENT), mcManager.isRicohTheta(source), changedRicohTheta);
         setMarkChange(editTextAccountId, mcManager.getAccountId(CURRENT), mcManager.getAccountId(source), changedAccountId);
         setMarkChange(editTextStreamNamePub, mcManager.getStreamNamePub(CURRENT), mcManager.getStreamNamePub(source), changedStreamNamePub);
         setMarkChange(editTextStreamNameSub, mcManager.getStreamNameSub(CURRENT), mcManager.getStreamNameSub(source), changedStreamNameSub);
-        setMarkChange(editTextPublishToken, mcManager.getPublishToken(CURRENT), mcManager.getPublishToken(source), changedPublishToken);
-        setMarkChange(editTextSubscribeToken, mcManager.getSubscribeToken(CURRENT), mcManager.getSubscribeToken(source), changedSubscribeToken);
-        setMarkChange(editTextPublishApiUrl, mcManager.getPublishApiUrl(CURRENT), mcManager.getPublishApiUrl(source), changedPublishApiUrl);
-        setMarkChange(editTextSubscribeApiUrl, mcManager.getSubscribeApiUrl(CURRENT), mcManager.getSubscribeApiUrl(source), changedSubscribeApiUrl);
-        setMarkChange(switchRicohTheta, mcManager.isRicohTheta(CURRENT), mcManager.isRicohTheta(source), changedRicohTheta);
+        setMarkChange(editTextSourceIdPub, mcManager.getSourceIdPub(CURRENT), mcManager.getSourceIdPub(source), changedSourceIdPub);
+        setMarkChange(switchSourceIdPubEnabled, mcManager.isSourceIdPubEnabled(CURRENT), mcManager.isSourceIdPubEnabled(source), changedSourceIdPubEnabled);
+        setMarkChange(editTextTokenPub, mcManager.getTokenPub(CURRENT), mcManager.getTokenPub(source), changedTokenPub);
+        setMarkChange(editTextTokenSub, mcManager.getTokenSub(CURRENT), mcManager.getTokenSub(source), changedTokenSub);
+        setMarkChange(editTextUrlPub, mcManager.getUrlPub(CURRENT), mcManager.getUrlPub(source), changedUrlPub);
+        setMarkChange(editTextUrlSub, mcManager.getUrlSub(CURRENT), mcManager.getUrlSub(source), changedUrlSub);
     }
 
     /**
@@ -338,37 +367,53 @@ public class SetMcFragment extends Fragment {
             }
             setMark(editTextStreamNameSub, false, changedStreamNameSub);
         }
-        if (changedPublishToken.get() || save) {
-            if (!mcManager.setPublishToken(editTextPublishToken.getText().toString(), save)) {
-                logPub += keyPublishToken + " ";
+        if (changedSourceIdPub.get() || save) {
+            if (!mcManager.setSourceIdPub(editTextSourceIdPub.getText().toString(), save)) {
+                logPub += keySourceIdPub + " ";
             } else {
                 applied = true;
             }
-            setMark(editTextPublishToken, false, changedPublishToken);
+            setMark(editTextSourceIdPub, false, changedSourceIdPub);
         }
-        if (changedSubscribeToken.get() || save) {
-            if (!mcManager.setSubscribeToken(editTextSubscribeToken.getText().toString(), save)) {
-                logSub += keySubscribeToken + " ";
+        if (changedSourceIdPubEnabled.get() || save) {
+            if (!mcManager.setSourceIdPubEnabled(switchSourceIdPubEnabled.isChecked(), save)) {
+                logPub += keySourceIdPubEnabled + " ";
             } else {
                 applied = true;
             }
-            setMark(editTextSubscribeToken, false, changedSubscribeToken);
+            setMark(switchSourceIdPubEnabled, false, changedSourceIdPubEnabled);
         }
-        if (changedPublishApiUrl.get() || save) {
-            if (!mcManager.setPublishApiUrl(editTextPublishApiUrl.getText().toString(), save)) {
-                logPub += keyPublishApiUrl + " ";
+        if (changedTokenPub.get() || save) {
+            if (!mcManager.setTokenPub(editTextTokenPub.getText().toString(), save)) {
+                logPub += keyTokenPub + " ";
             } else {
                 applied = true;
             }
-            setMark(editTextPublishApiUrl, false, changedPublishApiUrl);
+            setMark(editTextTokenPub, false, changedTokenPub);
         }
-        if (changedSubscribeApiUrl.get() || save) {
-            if (!mcManager.setSubscribeApiUrl(editTextSubscribeApiUrl.getText().toString(), save)) {
-                logSub += keySubscribeApiUrl + " ";
+        if (changedTokenSub.get() || save) {
+            if (!mcManager.setTokenSub(editTextTokenSub.getText().toString(), save)) {
+                logSub += keyTokenSub + " ";
             } else {
                 applied = true;
             }
-            setMark(editTextSubscribeApiUrl, false, changedSubscribeApiUrl);
+            setMark(editTextTokenSub, false, changedTokenSub);
+        }
+        if (changedUrlPub.get() || save) {
+            if (!mcManager.setUrlPub(editTextUrlPub.getText().toString(), save)) {
+                logPub += keyUrlPub + " ";
+            } else {
+                applied = true;
+            }
+            setMark(editTextUrlPub, false, changedUrlPub);
+        }
+        if (changedUrlSub.get() || save) {
+            if (!mcManager.setUrlSub(editTextUrlSub.getText().toString(), save)) {
+                logSub += keyUrlSub + " ";
+            } else {
+                applied = true;
+            }
+            setMark(editTextUrlSub, false, changedUrlSub);
         }
         if (changedRicohTheta.get() || save) {
             if (!mcManager.setRicohTheta(switchRicohTheta.isChecked(), save)) {

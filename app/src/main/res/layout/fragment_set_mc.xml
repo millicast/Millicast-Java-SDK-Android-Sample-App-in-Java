@@ -9,11 +9,9 @@
     android:verticalScrollbarPosition="defaultPosition"
     tools:context=".SetMcFragment">
 
-    <!-- TODO: Update blank fragment layout -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
 
         <LinearLayout
             android:layout_width="fill_parent"
@@ -34,38 +32,61 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
             <Switch
-                android:id="@+id/switchRicohTheta"
+                android:id="@+id/ricoh_theta_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ricoh_theta"
+                app:layout_constraintBottom_toTopOf="@+id/account_id"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toTopOf="@+id/account_id" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/account_id"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/account_id"
-                app:layout_constraintTop_toBottomOf="@+id/switchRicohTheta"
                 app:layout_constraintBottom_toTopOf="@+id/stream_name_pub"
+                app:layout_constraintTop_toBottomOf="@+id/ricoh_theta_switch"
                 tools:layout_editor_absoluteX="1dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/stream_name_pub"
+            <LinearLayout
+                android:id="@+id/linearLayout1_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/stream_name_publish"
-                app:layout_constraintTop_toBottomOf="@+id/account_id"
-                app:layout_constraintBottom_toTopOf="@+id/stream_name_sub" />
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toTopOf="@+id/stream_name_sub"
+                app:layout_constraintTop_toBottomOf="@+id/account_id">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/stream_name_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:hint="@string/stream_name_publish" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/source_id_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:hint="SourceId" />
+
+                <Switch
+                    android:id="@+id/source_id_pub_enabled"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="SourceId" />
+
+            </LinearLayout>
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/stream_name_sub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/stream_name_subscribe"
-                app:layout_constraintTop_toBottomOf="@+id/stream_name_pub"
                 app:layout_constraintBottom_toTopOf="@+id/publish_token"
+                app:layout_constraintTop_toBottomOf="@+id/stream_name_pub"
                 tools:layout_editor_absoluteX="0dp" />
 
             <com.google.android.material.textfield.TextInputEditText
@@ -73,44 +94,44 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/publish_token"
-                app:layout_constraintTop_toBottomOf="@+id/stream_name_sub"
-                app:layout_constraintBottom_toTopOf="@+id/subscribe_token" />
+                app:layout_constraintBottom_toTopOf="@+id/subscribe_token"
+                app:layout_constraintTop_toBottomOf="@+id/stream_name_sub" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/subscribe_token"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/subscribe_token"
-                app:layout_constraintTop_toBottomOf="@+id/publish_token"
-                app:layout_constraintBottom_toTopOf="@+id/publish_url" />
+                app:layout_constraintBottom_toTopOf="@+id/publish_url"
+                app:layout_constraintTop_toBottomOf="@+id/publish_token" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/publish_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/publish_url"
-                app:layout_constraintTop_toBottomOf="@+id/subscribe_token"
-                app:layout_constraintBottom_toTopOf="@+id/subscribe_url" />
+                app:layout_constraintBottom_toTopOf="@+id/subscribe_url"
+                app:layout_constraintTop_toBottomOf="@+id/subscribe_token" />
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/subscribe_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/subscribe_url"
-                app:layout_constraintTop_toBottomOf="@+id/publish_url"
-                app:layout_constraintBottom_toTopOf="@id/linearLayout1" />
+                app:layout_constraintBottom_toTopOf="@id/linearLayout1"
+                app:layout_constraintTop_toBottomOf="@+id/publish_url" />
 
             <LinearLayout
                 android:id="@+id/linearLayout1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@+id/subscribe_url"
-                app:layout_constraintBottom_toBottomOf="parent">
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/subscribe_url">
 
                 <LinearLayout
                     android:id="@+id/linearLayout2"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center_horizontal"
@@ -145,7 +166,7 @@
 
                 <LinearLayout
                     android:id="@+id/linearLayout3"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_horizontal|center_vertical"
@@ -174,6 +195,5 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

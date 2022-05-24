@@ -419,7 +419,7 @@ public class PublishFragment extends Fragment {
 
         displayCon();
 
-        textView.setText("Token: " + mcManager.getPublishToken(CURRENT) +
+        textView.setText("Token: " + mcManager.getTokenPub(CURRENT) +
                 "\nStream: " + mcManager.getStreamNamePub(CURRENT));
         buttonAudioSrc.setText(mcManager.getAudioSourceName());
         buttonVideoSrc.setText(mcManager.getVideoSourceName());

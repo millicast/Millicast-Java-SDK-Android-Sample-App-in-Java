@@ -313,7 +313,11 @@ public class Utils {
      * @return
      */
     public static Integer indexNext(int size, int now, boolean ascending, String logTag) {
-        Integer next;
+        Integer next = null;
+        if (size < 1) {
+            logD(TAG, logTag + "Failed. List size was less than 1. Next: " + next + " Now: " + now);
+            return null;
+        }
         if (ascending) {
             if (now >= (size - 1)) {
                 next = 0;
@@ -331,6 +335,12 @@ public class Utils {
                 logD(TAG, logTag + next + " Decrementing index.");
             }
         }
+
+        if (next < 0) {
+            logD(TAG, logTag + "Failed. Next is invalid. Next: " + next + " Now: " + now);
+            return null;
+        }
+
         logD(TAG, logTag + "Next: " + next + " Now: " + now);
         return next;
     }

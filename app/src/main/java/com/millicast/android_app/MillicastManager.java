@@ -33,12 +33,14 @@ import static com.millicast.Source.Type.NDI;
 import static com.millicast.android_app.Constants.ACCOUNT_ID;
 import static com.millicast.android_app.Constants.ACTION_MAIN_CAMERA_CLOSE;
 import static com.millicast.android_app.Constants.ACTION_MAIN_CAMERA_OPEN;
-import static com.millicast.android_app.Constants.PUBLISH_TOKEN;
-import static com.millicast.android_app.Constants.PUBLISH_URL;
+import static com.millicast.android_app.Constants.SOURCE_ID_PUB;
+import static com.millicast.android_app.Constants.SOURCE_ID_PUB_ENABLED;
+import static com.millicast.android_app.Constants.TOKEN_PUB;
+import static com.millicast.android_app.Constants.URL_PUB;
 import static com.millicast.android_app.Constants.STREAM_NAME_PUB;
 import static com.millicast.android_app.Constants.STREAM_NAME_SUB;
-import static com.millicast.android_app.Constants.SUBSCRIBE_TOKEN;
-import static com.millicast.android_app.Constants.SUBSCRIBE_URL;
+import static com.millicast.android_app.Constants.TOKEN_SUB;
+import static com.millicast.android_app.Constants.URL_SUB;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.Utils.logD;
 import static org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT;
@@ -48,10 +50,12 @@ public class MillicastManager {
     public static String keyAccountId = "ACCOUNT_ID";
     public static String keyStreamNamePub = "STREAM_NAME_PUB";
     public static String keyStreamNameSub = "STREAM_NAME_SUB";
-    public static String keyPublishToken = "TOKEN_PUB";
-    public static String keySubscribeToken = "TOKEN_SUB";
-    public static String keyPublishApiUrl = "URL_PUB";
-    public static String keySubscribeApiUrl = "URL_SUB";
+    public static String keyTokenPub = "TOKEN_PUB";
+    public static String keyTokenSub = "TOKEN_SUB";
+    public static String keyUrlPub = "URL_PUB";
+    public static String keyUrlSub = "URL_SUB";
+    public static String keySourceIdPub = "SOURCE_ID_PUB";
+    public static String keySourceIdPubEnabled = "SOURCE_ID_PUB_ENABLED";
     public static String keyRicohTheta = "RICOH_THETA";
     public static String keyConVisible = "CON_VISIBLE";
 
@@ -114,13 +118,18 @@ public class MillicastManager {
     private boolean ndiOutputVideo = false;
     private boolean ndiOutputAudio = false;
 
+    /**
+     * Assign {@link Constants} values as default values.
+     */
     private String accountId = ACCOUNT_ID;
     private String streamNamePub = STREAM_NAME_PUB;
     private String streamNameSub = STREAM_NAME_SUB;
-    private String publishToken = PUBLISH_TOKEN;
-    private String subscribeToken = SUBSCRIBE_TOKEN;
-    private String publishApiUrl = PUBLISH_URL;
-    private String subscribeApiUrl = SUBSCRIBE_URL;
+    private String tokenPub = TOKEN_PUB;
+    private String tokenSub = TOKEN_SUB;
+    private String sourceIdPub = SOURCE_ID_PUB;
+    private boolean sourceIdPubEnabled = SOURCE_ID_PUB_ENABLED;
+    private String urlPub = URL_PUB;
+    private String urlSub = URL_SUB;
     private boolean isRicohTheta = false;
 
     private Media media;
@@ -181,8 +190,8 @@ public class MillicastManager {
     private Subscriber subscriber;
 
     // Options objects
-    private Publisher.Option pubOptions;
-    private Client.Option subOptions;
+    private Publisher.Option optionPub;
+    private Subscriber.Option optionSub;
 
     // View objects
     private SwitchHdl switchHdl;
@@ -240,22 +249,33 @@ public class MillicastManager {
         setAccountId(Utils.getSaved(keyAccountId, ACCOUNT_ID, context), false);
         setStreamNamePub(Utils.getSaved(keyStreamNamePub, STREAM_NAME_PUB, context), false);
         setStreamNameSub(Utils.getSaved(keyStreamNameSub, STREAM_NAME_SUB, context), false);
-        setPublishToken(Utils.getSaved(keyPublishToken, PUBLISH_TOKEN, context), false);
-        setSubscribeToken(Utils.getSaved(keySubscribeToken, SUBSCRIBE_TOKEN, context), false);
-        setPublishApiUrl(Utils.getSaved(keyPublishApiUrl, PUBLISH_URL, context), false);
-        setSubscribeApiUrl(Utils.getSaved(keySubscribeApiUrl, SUBSCRIBE_URL, context), false);
+        setSourceIdPubEnabled(Utils.getSaved(keySourceIdPubEnabled, SOURCE_ID_PUB_ENABLED, context), false);
+        setTokenPub(Utils.getSaved(keyTokenPub, TOKEN_PUB, context), false);
+        setTokenSub(Utils.getSaved(keyTokenSub, TOKEN_SUB, context), false);
+        setSourceIdPub(Utils.getSaved(keySourceIdPub, SOURCE_ID_PUB, context), false);
+        setUrlPub(Utils.getSaved(keyUrlPub, URL_PUB, context), false);
+        setUrlSub(Utils.getSaved(keyUrlSub, URL_SUB, context), false);
         setRicohTheta(Utils.getSaved(keyRicohTheta, false, context), false);
 
         logD(TAG, "[init] OK.");
 
-        pubOptions = new Publisher.Option();
-        subOptions = new Client.Option();
+        optionPub = new Publisher.Option();
+        optionSub = new Subscriber.Option();
     }
 
     public String getAccountId(Source source) {
         return Utils.getProperty(source, accountId, ACCOUNT_ID, keyAccountId, context);
     }
 
+    /**
+     * Set the {@link #accountId Millicast accountId} to be used when next connecting to subscribe.
+     * Value will only be set if not currently connected to subscribe.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
     public boolean setAccountId(String newValue, boolean save) {
         String logTag = "[Account][Index][Set] ";
         if (subState != SubscriberState.DISCONNECTED) {
@@ -273,6 +293,15 @@ public class MillicastManager {
         return Utils.getProperty(source, streamNamePub, STREAM_NAME_PUB, keyStreamNamePub, context);
     }
 
+    /**
+     * Set the {@link #streamNamePub publish stream name} to be used when next publishing.
+     * Value will only be set if not currently publishing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
     public boolean setStreamNamePub(String newValue, boolean save) {
         String logTag = "[StreamNamePub][Set] ";
         if (pubState != PublisherState.DISCONNECTED) {
@@ -290,6 +319,15 @@ public class MillicastManager {
         return Utils.getProperty(source, streamNameSub, STREAM_NAME_SUB, keyStreamNameSub, context);
     }
 
+    /**
+     * Set the {@link #streamNameSub subscribe stream name} to be used when next subscribing.
+     * Value will only be set if not currently subscribing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
     public boolean setStreamNameSub(String newValue, boolean save) {
         String logTag = "[StreamNameSub][Set] ";
         if (subState != SubscriberState.DISCONNECTED) {
@@ -303,71 +341,188 @@ public class MillicastManager {
         return true;
     }
 
-    public String getPublishToken(Source source) {
-        return Utils.getProperty(source, publishToken, PUBLISH_TOKEN, keyPublishToken, context);
+    /**
+     * Get an Optional of the {@link #sourceIdPub publisher sourceId} of the given
+     * {@link Source information source (file, memory, or applied)}.
+     * If the sourceId is empty or if {@link #sourceIdPubEnabled} is false,
+     * then an empty Optional will be returned.
+     *
+     * @param source
+     * @return
+     */
+    public Optional getOptSourceIdPub(Source source) {
+        String srdId = getSourceIdPub(source);
+        if (srdId.isEmpty() || !isSourceIdPubEnabled(source)) {
+            return Optional.empty();
+        }
+        return Optional.of(srdId);
     }
 
-    public boolean setPublishToken(String newValue, boolean save) {
-        String logTag = "[PublishingToken][Set] ";
+    /**
+     * Get {@link #sourceIdPub publisher sourceId} from the desired
+     * {@link Source information source (file, memory, or applied)}.
+     *
+     * @param source
+     * @return
+     */
+    public String getSourceIdPub(Source source) {
+        return Utils.getProperty(source, sourceIdPub, SOURCE_ID_PUB, keySourceIdPub, context);
+    }
+
+    /**
+     * Set and apply the given value as {@link #sourceIdPub publisher sourceId}.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setSourceIdPub(String newValue, boolean save) {
+        String logTag = "[Src][Id][Pub][Set] ";
         if (pubState != PublisherState.DISCONNECTED) {
             logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
             return false;
         }
         if (save) {
-            Utils.saveValue(keyPublishToken, publishToken, newValue, logTag, context);
+            Utils.saveValue(keySourceIdPub, sourceIdPub, newValue, logTag, context);
         }
-        publishToken = newValue;
+        sourceIdPub = newValue;
         return true;
     }
 
-    public String getSubscribeToken(Source source) {
-        return Utils.getProperty(source, subscribeToken, SUBSCRIBE_TOKEN, keySubscribeToken, context);
+    /**
+     * Check if the {@link #sourceIdPub publisher sourceId} will be used when publishing.
+     *
+     * @param source
+     * @return
+     */
+    public boolean isSourceIdPubEnabled(Source source) {
+        return Utils.getProperty(source, sourceIdPubEnabled, SOURCE_ID_PUB_ENABLED, keySourceIdPubEnabled, context);
     }
 
-    public boolean setSubscribeToken(String newValue, boolean save) {
-        String logTag = "[SubscribeToken][Set] ";
-        if (subState != SubscriberState.DISCONNECTED) {
-            logD(TAG, logTag + "Failed! Cannot set when subState is " + subState + ".");
-            return false;
-        }
-        if (save) {
-            Utils.saveValue(keySubscribeToken, subscribeToken, newValue, logTag, context);
-        }
-        subscribeToken = newValue;
-        return true;
-    }
-
-    public String getPublishApiUrl(Source source) {
-        return Utils.getProperty(source, publishApiUrl, PUBLISH_URL, keyPublishApiUrl, context);
-    }
-
-    public boolean setPublishApiUrl(String newValue, boolean save) {
-        String logTag = "[PublishApiUrl][Set] ";
+    /**
+     * Set the {@link #sourceIdPub publisher sourceId} to be used (or not) when next publishing.
+     * Value will only be set if not currently publishing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setSourceIdPubEnabled(boolean newValue, boolean save) {
+        String logTag = "[Src][Id][Pub][Enabled][Set] ";
         if (pubState != PublisherState.DISCONNECTED) {
             logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
             return false;
         }
         if (save) {
-            Utils.saveValue(keyPublishApiUrl, publishApiUrl, newValue, logTag, context);
+            Utils.saveValue(keySourceIdPubEnabled, sourceIdPubEnabled, newValue, logTag, context);
         }
-        publishApiUrl = newValue;
+        sourceIdPubEnabled = newValue;
         return true;
     }
 
-    public String getSubscribeApiUrl(Source source) {
-        return Utils.getProperty(source, subscribeApiUrl, SUBSCRIBE_URL, keySubscribeApiUrl, context);
+    public String getTokenPub(Source source) {
+        return Utils.getProperty(source, tokenPub, TOKEN_PUB, keyTokenPub, context);
     }
 
-    public boolean setSubscribeApiUrl(String newValue, boolean save) {
-        String logTag = "[SubscribeApiUrl][Set] ";
+    /**
+     * Set the {@link #tokenPub publish token} to be used when next publishing.
+     * Value will only be set if not currently publishing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setTokenPub(String newValue, boolean save) {
+        String logTag = "[Token][Pub][Set] ";
+        if (pubState != PublisherState.DISCONNECTED) {
+            logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
+            return false;
+        }
+        if (save) {
+            Utils.saveValue(keyTokenPub, tokenPub, newValue, logTag, context);
+        }
+        tokenPub = newValue;
+        return true;
+    }
+
+    public String getTokenSub(Source source) {
+        return Utils.getProperty(source, tokenSub, TOKEN_SUB, keyTokenSub, context);
+    }
+
+    /**
+     * Set the {@link #tokenSub subscribe token} to be used when next subscribing.
+     * Value will only be set if not currently subscribing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setTokenSub(String newValue, boolean save) {
+        String logTag = "[Token][Sub][Set] ";
         if (subState != SubscriberState.DISCONNECTED) {
             logD(TAG, logTag + "Failed! Cannot set when subState is " + subState + ".");
             return false;
         }
         if (save) {
-            Utils.saveValue(keySubscribeApiUrl, subscribeApiUrl, newValue, logTag, context);
+            Utils.saveValue(keyTokenSub, tokenSub, newValue, logTag, context);
         }
-        subscribeApiUrl = newValue;
+        tokenSub = newValue;
+        return true;
+    }
+
+    public String getUrlPub(Source source) {
+        return Utils.getProperty(source, urlPub, URL_PUB, keyUrlPub, context);
+    }
+
+    /**
+     * Set the {@link #urlPub publish API URL} to be used when next publishing.
+     * Value will only be set if not currently publishing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setUrlPub(String newValue, boolean save) {
+        String logTag = "[Url][Pub][Set] ";
+        if (pubState != PublisherState.DISCONNECTED) {
+            logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
+            return false;
+        }
+        if (save) {
+            Utils.saveValue(keyUrlPub, urlPub, newValue, logTag, context);
+        }
+        urlPub = newValue;
+        return true;
+    }
+
+    public String getUrlSub(Source source) {
+        return Utils.getProperty(source, urlSub, URL_SUB, keyUrlSub, context);
+    }
+
+    /**
+     * Set the {@link #urlSub subscribe API URL} to be used when next subscribing.
+     * Value will only be set if not currently subscribing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
+    public boolean setUrlSub(String newValue, boolean save) {
+        String logTag = "[Url][Sub][Set] ";
+        if (subState != SubscriberState.DISCONNECTED) {
+            logD(TAG, logTag + "Failed! Cannot set when subState is " + subState + ".");
+            return false;
+        }
+        if (save) {
+            Utils.saveValue(keyUrlSub, urlSub, newValue, logTag, context);
+        }
+        urlSub = newValue;
         return true;
     }
 
@@ -375,6 +530,15 @@ public class MillicastManager {
         return Utils.getProperty(source, isRicohTheta, false, keyRicohTheta, context);
     }
 
+    /**
+     * Set the {@link #isRicohTheta if current device is Ricoh Theta value} to be used when next capturing.
+     * Value will only be set if not currently capturing.
+     * Specify whether to save the value into device memory as well.
+     *
+     * @param newValue
+     * @param save
+     * @return True if value successfully set, false otherwise.
+     */
     public boolean setRicohTheta(boolean newValue, boolean save) {
         String logTag = "[RicohTheta][Set] ";
         if (capState != CaptureState.NOT_CAPTURED) {
@@ -452,7 +616,7 @@ public class MillicastManager {
         Subscriber.Credential creds = this.subscriber.getCredentials();
         creds.accountId = getAccountId(CURRENT);
         creds.streamName = getStreamNameSub(CURRENT);
-        creds.apiUrl = getSubscribeApiUrl(CURRENT);
+        creds.apiUrl = getUrlSub(CURRENT);
 
         audioPlaybackStart();
 
@@ -464,12 +628,12 @@ public class MillicastManager {
 
         // If a Subscribe Token is required, add it.
         // If it is not required, do not add it.
-        String subscribeToken = getSubscribeToken(CURRENT);
-        if (subscribeToken != null && !subscribeToken.isEmpty()) {
-            creds.token = Optional.of(subscribeToken);
+        String tokenSub = getTokenSub(CURRENT);
+        if (tokenSub != null && !tokenSub.isEmpty()) {
+            creds.token = Optional.of(tokenSub);
         }
         this.subscriber.setCredentials(creds);
-        this.subscriber.setOptions(subOptions);
+        this.subscriber.setOptions(optionSub);
         this.subscriber.connect();
         Log.d(TAG, "Starting media subscribe...");
         Log.d(TAG, "Started display video.");
@@ -1275,7 +1439,7 @@ public class MillicastManager {
      * @param value Set BWE to this value in bytes.
      */
     public void overrideBWE(int value) {
-        pubOptions.bwe = Optional.of(value);
+        optionPub.bwe = Optional.of(value);
         logD(TAG, "[overrideBWE] Overridden Publisher BWE to " + value + " bytes.");
     }
 
@@ -1829,12 +1993,13 @@ public class MillicastManager {
         }
 
         Publisher.Credential creds = publisher.getCredentials();
-        creds.apiUrl = getPublishApiUrl(CURRENT);
+        creds.apiUrl = getUrlPub(CURRENT);
         creds.streamName = getStreamNamePub(CURRENT);
-        creds.token = getPublishToken(CURRENT);
+        creds.token = getTokenPub(CURRENT);
 
         publisher.setCredentials(creds);
-        publisher.setOptions(pubOptions);
+        optionPub.sourceId = getOptSourceIdPub(CURRENT);
+        publisher.setOptions(optionPub);
 
         boolean success;
         String error = "Failed to connect to Millicast!";
@@ -2705,14 +2870,14 @@ public class MillicastManager {
             if (!publisher.isPublishing()) {
                 if (!none.equals(ac)) {
                     audioCodec = ac;
-                    pubOptions.audioCodec = Optional.of(ac);
+                    optionPub.audioCodec = Optional.of(ac);
                     log += "Set Audio:" + audioCodec + " on Publisher. ";
                 } else {
                     log += "Audio NOT set on Publisher.";
                 }
                 if (!none.equals(vc)) {
                     videoCodec = vc;
-                    pubOptions.videoCodec = Optional.of(vc);
+                    optionPub.videoCodec = Optional.of(vc);
                     log += "Set Video:" + videoCodec + " on Publisher.";
                 } else {
                     log += "Video NOT set on Publisher.";

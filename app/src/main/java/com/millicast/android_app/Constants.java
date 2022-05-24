@@ -6,11 +6,13 @@ public final class Constants {
     public static final String ACCOUNT_ID = "ACCOUNT ID";
     public static final String STREAM_NAME_PUB = "STREAM NAME PUB";
     public static final String STREAM_NAME_SUB = "STREAM NAME SUB";
-    public static final String PUBLISH_TOKEN = "PUBLISHING TOKEN";
+    public static final String TOKEN_PUB = "PUBLISHING TOKEN";
     // If a Subscribe Token is not required, set it as an empty string.
-    public static final String SUBSCRIBE_TOKEN = "";
-    public static final String PUBLISH_URL = "https://director.millicast.com/api/director/publish";
-    public static final String SUBSCRIBE_URL = "https://director.millicast.com/api/director/subscribe";
+    public static final String TOKEN_SUB = "";
+    public static final String SOURCE_ID_PUB = "";
+    public static final boolean SOURCE_ID_PUB_ENABLED = false;
+    public static final String URL_PUB = "https://director.millicast.com/api/director/publish";
+    public static final String URL_SUB = "https://director.millicast.com/api/director/subscribe";
     
     // Ricoh Constants
     public static final String ACTION_MAIN_CAMERA_CLOSE = "com.theta360.plugin.ACTION_MAIN_CAMERA_CLOSE";
