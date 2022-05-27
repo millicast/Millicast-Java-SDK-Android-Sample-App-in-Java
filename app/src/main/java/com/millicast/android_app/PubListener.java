@@ -17,7 +17,7 @@ public class PubListener implements Publisher.Listener {
 
     private PublishFragment publishFragment;
     private MillicastManager mcManager;
-    private String logTag = "[Pub][Ltn] ";
+    private String logTag = "[Pub][Ltn]";
 
     public PubListener() {
         mcManager = MillicastManager.getSingleInstance();
@@ -27,11 +27,19 @@ public class PubListener implements Publisher.Listener {
     public void onPublishing() {
         mcManager.setPubState(PUBLISHING);
         setUI();
+        String logTag = this.logTag + "[On] ";
         makeSnackbar(logTag, "Publishing", publishFragment);
     }
 
     @Override
+    public void onPublishingError(String s) {
+        String logTag = this.logTag + "[Error] ";
+        makeSnackbar(logTag, "Publish Error:" + s, publishFragment);
+    }
+
+    @Override
     public void onConnected() {
+        String logTag = this.logTag + "[Con][On] ";
         mcManager.setPubState(CONNECTED);
         mcManager.enablePubStats(1000);
         setUI();
@@ -41,35 +49,41 @@ public class PubListener implements Publisher.Listener {
 
     @Override
     public void onConnectionError(String reason) {
-        makeSnackbar(logTag, reason, publishFragment);
+        String logTag = this.logTag + "[Con][Error] ";
         mcManager.setPubState(DISCONNECTED);
         setUI();
+        makeSnackbar(logTag, "Connection FAILED! " + reason, publishFragment);
+    }
+
+    @Override
+    public void onSignalingError(String s) {
+        String logTag = this.logTag + "[Sig][Error] ";
+        makeSnackbar(logTag, "Signaling Error:" + s, publishFragment);
     }
 
     @Override
     public void onStatsReport(RTCStatsReport statsReport) {
-        String log = "[Pub][Stats][Report] " + statsReport.toString();
-        logD("STATS", log);
+        String logTag = this.logTag + "[Stat] ";
+        String log = logTag + statsReport.toString();
+        logD(TAG, log);
     }
 
     @Override
-    public void onActive(String s, String[] strings, Optional<String> optional) {
-
+    public void onViewerCount(int count) {
+        String logTag = this.logTag + "[Viewer] ";
+        logD(TAG, logTag + "Count: " + count + ".");
     }
 
     @Override
-    public void onInactive(String s, Optional<String> optional) {
-
+    public void onActive() {
+        String logTag = this.logTag + "[Viewer][Active] ";
+        logD(TAG, logTag + "A viewer has subscribed to our stream.");
     }
 
     @Override
-    public void onStopped() {
-
-    }
-
-    @Override
-    public void onVad(String s, Optional<String> optional) {
-
+    public void onInactive() {
+        String logTag = this.logTag + "[Viewer][Active][In] ";
+        logD(TAG, logTag + "No viewers are currently subscribed to our stream.");
     }
 
     public void setPublishFragment(PublishFragment publishFragment) {

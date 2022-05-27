@@ -10,6 +10,7 @@ import com.millicast.AudioPlayback;
 import com.millicast.AudioSource;
 import com.millicast.AudioTrack;
 import com.millicast.Client;
+import com.millicast.LayerData;
 import com.millicast.LogLevel;
 import com.millicast.Logger;
 import com.millicast.Media;
@@ -27,6 +28,7 @@ import org.webrtc.CameraEnumerator;
 import org.webrtc.RendererCommon.ScalingType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Optional;
 
 import static com.millicast.Source.Type.NDI;
@@ -42,6 +44,7 @@ import static com.millicast.android_app.Constants.STREAM_NAME_SUB;
 import static com.millicast.android_app.Constants.TOKEN_SUB;
 import static com.millicast.android_app.Constants.URL_SUB;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.Utils.getArrayStr;
 import static com.millicast.android_app.Utils.logD;
 import static org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT;
 
@@ -119,6 +122,7 @@ public class MillicastManager {
     private boolean ndiOutputAudio = false;
 
     /**
+     * Millicast platform values.
      * Assign {@link Constants} values as default values.
      */
     private String accountId = ACCOUNT_ID;
@@ -132,6 +136,7 @@ public class MillicastManager {
     private String urlSub = URL_SUB;
     private boolean isRicohTheta = false;
 
+    // Media devices
     private Media media;
     private String audioSourceIndexKey = "AUDIO_SOURCE_INDEX";
     private int audioSourceIndexDefault = 0;
@@ -162,6 +167,7 @@ public class MillicastManager {
     private int capabilityIndex;
     private VideoCapabilities capability;
 
+    // Media codecs
     private ArrayList<String> audioCodecList;
     private String audioCodecIndexKey = "AUDIO_CODEC_INDEX";
     private int audioCodecIndexDefault = 0;
@@ -175,10 +181,24 @@ public class MillicastManager {
     private String videoCodecRTV = "H264";
     private String videoCodec;
 
+    // Media objects
     private AudioTrack pubAudioTrack;
     private AudioTrack subAudioTrack;
     private VideoTrack pubVideoTrack;
     private VideoTrack subVideoTrack;
+    // MID (Media Id) for received audio/video tracks.
+    private String midAudio;
+    private String midVideo;
+    /**
+     * Map of SourceId : {@link SourceInfo} of received and currently active sources.
+     */
+    private HashMap<String, SourceInfo> sourceMap;
+    // SourceId to being subscribed to for Audio.
+    private String sourceIdAudio = null;
+    // SourceId to being subscribed to for Video.
+    private String sourceIdVideo = null;
+
+    // Display
     private VideoRenderer pubRenderer;
     private VideoRenderer subRenderer;
     private boolean pubMirrored = false;
@@ -186,16 +206,16 @@ public class MillicastManager {
     private ScalingType pubScaling = SCALE_ASPECT_FIT;
     private ScalingType subScaling = SCALE_ASPECT_FIT;
 
+    // Publish/Subscribe
     private Publisher publisher;
     private Subscriber subscriber;
-
-    // Options objects
     private Publisher.Option optionPub;
     private Subscriber.Option optionSub;
 
     // View objects
     private SwitchHdl switchHdl;
     private VidSrcEvtHdl vidSrcEvtHdl;
+    private SubscribeFragment subscribeFragment;
     private PubListener pubListener;
     private SubListener subListener;
 
@@ -257,10 +277,11 @@ public class MillicastManager {
         setUrlSub(Utils.getSaved(keyUrlSub, URL_SUB, context), false);
         setRicohTheta(Utils.getSaved(keyRicohTheta, false, context), false);
 
-        logD(TAG, "[init] OK.");
-
+        sourceMap = new HashMap<>();
         optionPub = new Publisher.Option();
         optionSub = new Subscriber.Option();
+
+        logD(TAG, "[init] OK.");
     }
 
     public String getAccountId(Source source) {
@@ -378,7 +399,7 @@ public class MillicastManager {
      * @return True if value successfully set, false otherwise.
      */
     public boolean setSourceIdPub(String newValue, boolean save) {
-        String logTag = "[Src][Id][Pub][Set] ";
+        String logTag = "[Source][Id][Pub][Set] ";
         if (pubState != PublisherState.DISCONNECTED) {
             logD(TAG, logTag + "Failed! Cannot set when pubState is " + pubState + ".");
             return false;
@@ -642,7 +663,7 @@ public class MillicastManager {
     }
 
     //**********************************************************************************************
-    // Select/Switch videoSource, capability.
+    // Query/Select videoSource, capability.
     //**********************************************************************************************
 
     /**
@@ -726,45 +747,6 @@ public class MillicastManager {
         setAudioSource();
         logD(TAG, logTag + "OK.");
         return true;
-    }
-
-    /**
-     * Select the next available audioSource on device.
-     * This will set the audioSource to be used when capturing starts.
-     * If at end of range of audioSources, cycle to start of the other end.
-     * If capturing, switching audioSource will not be allowed.
-     *
-     * @param ascending If true, "next" audioSource is defined in the direction of increasing index,
-     *                  otherwise it is in the opposite direction.
-     * @return Null if {@link #audioSource} could be set, else an error message might be returned.
-     */
-    public String switchAudioSource(boolean ascending) {
-
-        String logTag = "[Source][Audio][Switch] ";
-        String error;
-        Integer newValue = null;
-
-        // If videoSource is already capturing, switch to only non-NDI videoSource.
-        if (isAudioCaptured()) {
-            error = "Failed! Unable to switch audioSource when capturing.";
-            logD(TAG, logTag + error);
-            return error;
-        }
-
-        newValue = audioSourceIndexNext(ascending, audioSourceIndex, getAudioSourceList(false).size());
-        if (newValue == null) {
-            error = "FAILED! Unable to get next audioSource!";
-            logD(TAG, logTag + error);
-            return error;
-        }
-
-        // Set new audioSource
-        logD(TAG, logTag + "Setting audioSource index to:"
-                + newValue + ".");
-        setAudioSourceIndex(newValue);
-
-        logD(TAG, logTag + "OK.");
-        return null;
     }
 
     /**
@@ -855,6 +837,98 @@ public class MillicastManager {
     }
 
     /**
+     * Get the current list of VideoCapabilities available.
+     *
+     * @return
+     */
+    public ArrayList<VideoCapabilities> getCapabilityList() {
+        return capabilityList;
+    }
+
+    public int getCapabilityIndex() {
+        String log = "[Capability][Index] " + capabilityIndex + ".";
+        logD(TAG, log);
+        return capabilityIndex;
+    }
+
+    /**
+     * Set the selected capability index to the specified value and save to device memory.
+     * A new capability will be set using this value.
+     * This capability will be set into the videoSource, if available.
+     *
+     * @param newValue The new value to be set.
+     */
+    public void setCapabilityIndex(int newValue) {
+        // Set new value into SharePreferences.
+        String logTag = "[Capability][Index][Set] ";
+        Utils.saveValue(capabilityIndexKey, capabilityIndex, newValue, logTag, context);
+        capabilityIndex = newValue;
+
+        // Set new capability
+        setCapability();
+        logD(TAG, logTag + "OK.");
+    }
+
+    public String getMidAudio() {
+        return midAudio;
+    }
+
+    public void setMidAudio(String midAudio) {
+        this.midAudio = midAudio;
+    }
+
+    public String getMidVideo() {
+        return midVideo;
+    }
+
+    public void setMidVideo(String midVideo) {
+        this.midVideo = midVideo;
+    }
+
+    //**********************************************************************************************
+    // Switch Media
+    //**********************************************************************************************
+
+    /**
+     * Select the next available audioSource on device.
+     * This will set the audioSource to be used when capturing starts.
+     * If at end of range of audioSources, cycle to start of the other end.
+     * If capturing, switching audioSource will not be allowed.
+     *
+     * @param ascending If true, "next" audioSource is defined in the direction of increasing index,
+     *                  otherwise it is in the opposite direction.
+     * @return Null if {@link #audioSource} could be set, else an error message might be returned.
+     */
+    public String switchAudioSource(boolean ascending) {
+
+        String logTag = "[Source][Audio][Switch] ";
+        String error;
+        Integer newValue = null;
+
+        // If videoSource is already capturing, switch to only non-NDI videoSource.
+        if (isAudioCaptured()) {
+            error = "Failed! Unable to switch audioSource when capturing.";
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        newValue = audioSourceIndexNext(ascending, audioSourceIndex, getAudioSourceList(false).size());
+        if (newValue == null) {
+            error = "FAILED! Unable to get next audioSource!";
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        // Set new audioSource
+        logD(TAG, logTag + "Setting audioSource index to:"
+                + newValue + ".");
+        setAudioSourceIndex(newValue);
+
+        logD(TAG, logTag + "OK.");
+        return null;
+    }
+
+    /**
      * Stop capturing on current videoSource and capture using the next available videoSource on device.
      * If not currently capturing, this will set the videoSource to be used when capturing starts.
      * If at end of range of videoSources, cycle to start of the other end.
@@ -897,39 +971,6 @@ public class MillicastManager {
 
         logD(TAG, logTag + " OK.");
         return null;
-    }
-
-    /**
-     * Get the current list of VideoCapabilities available.
-     *
-     * @return
-     */
-    public ArrayList<VideoCapabilities> getCapabilityList() {
-        return capabilityList;
-    }
-
-    public int getCapabilityIndex() {
-        String log = "[Capability][Index] " + capabilityIndex + ".";
-        logD(TAG, log);
-        return capabilityIndex;
-    }
-
-    /**
-     * Set the selected capability index to the specified value and save to device memory.
-     * A new capability will be set using this value.
-     * This capability will be set into the videoSource, if available.
-     *
-     * @param newValue The new value to be set.
-     */
-    public void setCapabilityIndex(int newValue) {
-        // Set new value into SharePreferences.
-        String logTag = "[Capability][Index][Set] ";
-        Utils.saveValue(capabilityIndexKey, capabilityIndex, newValue, logTag, context);
-        capabilityIndex = newValue;
-
-        // Set new capability
-        setCapability();
-        logD(TAG, logTag + "OK.");
     }
 
     /**
@@ -1089,13 +1130,25 @@ public class MillicastManager {
 
     /**
      * Set the videoTrack in MillicastManager and render it.
+     * Will execute on UI thread.
+     *
+     * @param videoTrack
+     */
+    public void setRenderSubVideo(VideoTrack videoTrack) {
+        getMainActivity().runOnUiThread(() -> {
+            setRenderSubVideoTrack(videoTrack);
+        });
+    }
+
+    /**
+     * Set the videoTrack in MillicastManager and render it.
      * Must be called on UI thread.
      *
-     * @param subVideoTrack
+     * @param videoTrack
      */
-    public void setRenderSubVideoTrack(VideoTrack subVideoTrack) {
-        this.subVideoTrack = subVideoTrack;
-        if (subVideoTrack == null) {
+    public void setRenderSubVideoTrack(VideoTrack videoTrack) {
+        this.subVideoTrack = videoTrack;
+        if (videoTrack == null) {
             logD(TAG, "[setRenderSubVideoTrack] videoTrack is null, so not rendering it...");
             return;
         }
@@ -1215,6 +1268,49 @@ public class MillicastManager {
         }
         logD(TAG, logTag + "OK.");
         return nextScaling;
+    }
+
+
+    public ArrayList<AudioPlayback> getAudioPlaybackList() {
+        if (audioPlaybackList == null) {
+            audioPlaybackList = getMedia().getAudioPlayback();
+        }
+        String log = "[getAudioPlaybackList] AudioPlaybackList is: " + audioPlaybackList;
+        Log.d(TAG, log);
+        return audioPlaybackList;
+    }
+
+    public int getAudioPlaybackIndex() {
+        String log = "[Playback][Audio][Index] " + audioPlaybackIndex + ".";
+        logD(TAG, log);
+        return audioPlaybackIndex;
+    }
+
+    /**
+     * If not currently subscribed, this will set the selected {@link #audioPlaybackIndex}
+     * to the specified value and save to device memory.
+     * A new {@link #audioPlayback} will be set using this value.
+     * If currently subscribed, no changes to the current {@link #audioPlayback} will be made
+     * as changes can only be made when there is no subscription on going.
+     *
+     * @param newValue
+     * @return
+     */
+    public boolean setAudioPlaybackIndex(int newValue) {
+        String logTag = "[Playback][Audio][Index][Set] ";
+
+        // If currently subscribing, do not set new audioSourceIndex.
+        if (isSubscribing()) {
+            logD(TAG, logTag + "NOT setting to " + newValue + " as currently subscribing.");
+            logD(TAG, logTag + "AudioPlayback:" +
+                    getAudioSourceStr(audioPlayback, true));
+            return false;
+        }
+
+        Utils.saveValue(audioPlaybackIndexKey, audioPlaybackIndex, newValue, logTag, context);
+        audioPlaybackIndex = newValue;
+        setAudioPlayback();
+        return true;
     }
 
     //**********************************************************************************************
@@ -1447,6 +1543,10 @@ public class MillicastManager {
     // Subscribe
     //**********************************************************************************************
 
+    public SubscribeFragment getSubFragment() {
+        return subscribeFragment;
+    }
+
     /**
      * Sets the Subscribe View into the Subscriber.Listener.
      * If the Listener does not exist, it will be created.
@@ -1454,13 +1554,14 @@ public class MillicastManager {
      * @param view
      */
     public void setSubView(SubscribeFragment view) {
+        subscribeFragment = view;
+        String logTag = "[Sub][View][set]";
         if (subListener == null) {
-            logD(TAG, "[setSubView] SubListener does not exist...");
+            logD(TAG, logTag + " SubListener does not exist...");
             subListener = new SubListener();
-            logD(TAG, "[setSubView] Created a new SubListener.");
+            logD(TAG, logTag + " Created a new SubListener.");
         }
-        subListener.setSubscribeFragment(view);
-        logD(TAG, "[setSubView] Set Subscribe View into the Subscriber.Listener.");
+        logD(TAG, logTag + " Set Subscribe View into the Subscriber.Listener.");
     }
 
     /**
@@ -1495,8 +1596,9 @@ public class MillicastManager {
      * Stop subscribing and disconnect Subscriber from Millicast .
      */
     public void stopSubscribe() {
+        String logTag = "[Publish][Stop] ";
         if (subscriber == null || !subscriber.isSubscribed()) {
-            logD(TAG, "[stopSubscribe] Failed as we are not subscribing!");
+            logD(TAG, logTag + "Failed as we are not subscribing!");
             return;
         }
 
@@ -1505,52 +1607,494 @@ public class MillicastManager {
 
         // Disconnect Subscriber
         subscriber.disconnect();
+        sourceMap = null;
+        sourceIdAudio = null;
+        sourceIdVideo = null;
         enableSubStats(0);
         setSubState(SubscriberState.DISCONNECTED);
-        logD(TAG, "Disconnected from Millicast.");
+        logD(TAG, logTag + "Disconnected from Millicast.");
+        subscriber = null;
+        Log.d(TAG, logTag + "Subscriber released and recreating...");
+        getSubscriber();
+        logD(TAG, logTag + "Subscriber recreated.");
     }
 
-    public ArrayList<AudioPlayback> getAudioPlaybackList() {
-        if (audioPlaybackList == null) {
-            audioPlaybackList = getMedia().getAudioPlayback();
+    //**********************************************************************************************
+    // Subscribe - Sources and Layers
+    //**********************************************************************************************
+
+    /**
+     * Get the current list of active sources.
+     * If there are no active sources, list returned will have size 0.
+     *
+     * @return
+     */
+    public ArrayList<String> getSourceList() {
+        String logTag = "[Source][Id][List] ";
+        ArrayList<String> list;
+        if (sourceMap == null || sourceMap.size() == 0) {
+            list = new ArrayList<>();
+            logD(TAG, logTag + "Empty list as there are no active sources.");
+            return list;
         }
-        String log = "[getAudioPlaybackList] AudioPlaybackList is: " + audioPlaybackList;
-        Log.d(TAG, log);
-        return audioPlaybackList;
+
+        list = new ArrayList<>(sourceMap.keySet());
+        logD(TAG, logTag + getArrayStr(list, ", ", null));
+        return list;
     }
 
-    public int getAudioPlaybackIndex() {
-        String log = "[Playback][Audio][Index] " + audioPlaybackIndex + ".";
-        logD(TAG, log);
-        return audioPlaybackIndex;
+    public String getSourceIdAudio() {
+        return sourceIdAudio;
+    }
+
+    public String getSourceIdVideo() {
+        return sourceIdVideo;
     }
 
     /**
-     * If not currently subscribed, this will set the selected {@link #audioPlaybackIndex}
-     * to the specified value and save to device memory.
-     * A new {@link #audioPlayback} will be set using this value.
-     * If currently subscribed, no changes to the current {@link #audioPlayback} will be made
-     * as changes can only be made when there is no subscription on going.
+     * Get the {@link SourceInfo} of the currently projected audio or video source.
      *
-     * @param newValue
+     * @param isAudio
      * @return
      */
-    public boolean setAudioPlaybackIndex(int newValue) {
-        String logTag = "[Playback][Audio][Index][Set] ";
+    public SourceInfo getSourceProjected(boolean isAudio) {
+        String logTag = "[Source][Id]";
+        String sourceId = this.sourceIdAudio;
+        if (!isAudio) {
+            logTag += "[Video] ";
+            sourceId = this.sourceIdVideo;
+        } else {
+            logTag += "[Audio] ";
+        }
 
-        // If currently subscribing, do not set new audioSourceIndex.
-        if (isSubscribing()) {
-            logD(TAG, logTag + "NOT setting to " + newValue + " as currently subscribing.");
-            logD(TAG, logTag + "AudioPlayback:" +
-                    getAudioSourceStr(audioPlayback, true));
+        if (sourceId == null) {
+            logD(TAG, logTag + "None. There is no projected source.");
+            return null;
+        }
+        // Get the SourceInfo of the project source.
+        SourceInfo source = sourceMap.get(sourceId);
+        if (source == null) {
+            logD(TAG, logTag + "None. The projected source cannot be found!");
+            return null;
+        }
+        logD(TAG, logTag + source + ".");
+        return source;
+    }
+
+    /**
+     * Request a received source of a given sourceId to be projected onto our audio or video track.
+     * To project the default/main source (the latest one published without a sourceId),
+     * provide the sourceId as an empty String ("").
+     *
+     * @param sourceId
+     * @param isAudio
+     * @return
+     */
+    public boolean projectSource(String sourceId, boolean isAudio) {
+        String logTag = "[Source][Id][Project]:" + sourceId + " ";
+        if (isAudio) {
+            logTag += "A ";
+        } else {
+            logTag += "V ";
+        }
+        String log;
+
+        if (sourceId == "") {
+            log = "Note: This is the default/main source with no sourceId";
+            logD(TAG, logTag + log);
+        }
+
+        // Get MediaInfo of the source we want.
+        if (sourceMap == null) {
+            log = "Failed! sourceMap is not available.";
+            logD(TAG, logTag + log);
+            return false;
+        }
+        SourceInfo sourceInfo = sourceMap.get(sourceId);
+        if (sourceInfo == null) {
+            log = "Failed! sourceId is not available! " +
+                    "sourceMap: " + sourceMap + ".";
+            logD(TAG, logTag + log);
             return false;
         }
 
-        Utils.saveValue(audioPlaybackIndexKey, audioPlaybackIndex, newValue, logTag, context);
-        audioPlaybackIndex = newValue;
-        setAudioPlayback();
-        return true;
+        log = "Source: " + sourceInfo + ".";
+        logD(TAG, logTag + log);
+
+        // Get the mid of our track on which to receive the source.
+        String mid = getMidAudio();
+        if (!isAudio) {
+            mid = getMidVideo();
+        }
+
+        // Generate the ProjectionData required from the MediaInfo.
+        ArrayList<Subscriber.ProjectionData> projectionData =
+                sourceInfo.getProjectionData(mid, isAudio);
+        if (projectionData == null) {
+            log = "Failed! ProjectData is not available for sourceInfo! " +
+                    "sourceMap: " + sourceMap + ".";
+            logD(TAG, logTag + log);
+            return false;
+        }
+
+        // Send the request to Millicast and return the result of the request.
+        log = "Trying to project source onto mid:" + mid + " ...";
+        logD(TAG, logTag + log);
+        boolean result = subscriber.project(sourceId, projectionData);
+
+        // If successful, track the new sourceId.
+        if (result) {
+            log = "OK. Projected new ";
+            if (isAudio) {
+                log += "Audio source.\n";
+                sourceIdAudio = sourceId;
+                logD(TAG, logTag + log);
+            } else {
+                log += "Video source.\n";
+                sourceIdVideo = sourceId;
+                // Set view to display the Layers of the projected video source.
+                log += "Setting new Layers of the project source in the view...";
+                logD(TAG, logTag + log);
+                // Reset the Layers UI in the view.
+                loadViewLayer();
+            }
+        } else {
+            log = "Failed!";
+            logD(TAG, logTag + log);
+        }
+        return result;
     }
+
+    /**
+     * Adds a new source in the form of a {@link SourceInfo} to our list of active source list.
+     *
+     * @param sourceId
+     * @param sourceInfo
+     */
+    public void addSource(String sourceId, SourceInfo sourceInfo) {
+        String logTag = "[Source][Id][Add]:" + sourceId + " ";
+        String log;
+        if (sourceId == null || sourceInfo == null) {
+            log = "Failed! sourceMap: " + sourceMap + ", sourceInfo: " + sourceInfo + ".";
+            logD(TAG, logTag + log);
+            return;
+        }
+        if (sourceMap == null) {
+            sourceMap = new HashMap<>();
+            log = "Created new sourceMap: " + sourceMap + ", sourceInfo: " + sourceInfo + ".";
+            logD(TAG, logTag + log);
+        }
+
+        sourceMap.put(sourceId, sourceInfo);
+        log = "OK. Added source (" + sourceInfo + ") to our list of active sources: " + sourceMap + ".";
+        logD(TAG, logTag + log);
+    }
+
+    /**
+     * Remove a source from our {@link #sourceMap}.
+     * If this is a currently projected source:
+     * - Clear the affected {@link #sourceIdAudio} and {@link #sourceIdVideo}.
+     * - Project one of the remaining source in {@link #sourceMap} (if any).
+     *
+     * @param sourceId
+     * @return The {@link SourceInfo} removed or null if the source could not be found.
+     */
+    public SourceInfo removeSource(String sourceId) {
+        String logTag = "[Source][Id][Remove]:" + sourceId + " ";
+        String log;
+        if (sourceId == null || sourceMap == null) {
+            log = "Failed! sourceMap: " + sourceMap + ".";
+            logD(TAG, logTag + log);
+            return null;
+        }
+        SourceInfo sourceInfo = sourceMap.remove(sourceId);
+        if (sourceInfo == null) {
+            log = "Failed! sourceId is not available! sourceMap: " + sourceMap + ".";
+            logD(TAG, logTag + log);
+            return null;
+        }
+
+        String newSid;
+        if (sourceId.equals(sourceIdAudio)) {
+            sourceIdAudio = null;
+            log = "Removed current sourceIdAudio.";
+            if (sourceMap.size() == 0) {
+                log += " No remaining audio source to project.";
+                logD(TAG, logTag + log);
+            } else {
+                newSid = (String) (sourceMap.keySet().toArray())[0];
+                log += " Trying to project another audio source: " + newSid + "...";
+                logD(TAG, logTag + log);
+                projectSource(newSid, true);
+            }
+        }
+
+        if (sourceId.equals(sourceIdVideo)) {
+            sourceIdVideo = null;
+            log = "Removed current sourceIdVideo.";
+            if (sourceMap.size() == 0) {
+                log += " No remaining video source to project. Reloading layer view...";
+                logD(TAG, logTag + log);
+                // Reload layer view.
+                loadViewLayer();
+            } else {
+                newSid = (String) (sourceMap.keySet().toArray())[0];
+                log += " Trying to project another video source: " + newSid + "...";
+                logD(TAG, logTag + log);
+                projectSource(newSid, false);
+            }
+        }
+
+        log = "OK. Source (" + sourceInfo + ") removed from our list of active sources: " + sourceMap + ".";
+        logD(TAG, logTag + log);
+        return sourceInfo;
+    }
+
+    /**
+     * Load the Source UI in the view when the list of active sources change.
+     *
+     * @param isAudio Set to null if both audio and video sources are to be loaded.
+     * @param changed True if the source List has changed, false otherwise.
+     */
+    public void loadViewSource(Boolean isAudio, boolean changed) {
+        String logTag = "[View][Source][Load] ";
+        if (subscribeFragment == null) {
+            logD(TAG, logTag + "Failed! The SubscribeFragment does not exist.");
+            return;
+        }
+
+        ArrayList<String> spinnerList = getSourceList();
+        Utils.GetSelectedIndex lambdaAudio = new Utils.GetSelectedIndex() {
+            public int getSelectedIndex(ArrayList list) {
+                String selection = MillicastManager.this.getSourceIdAudio();
+                if (list == null || selection == null) {
+                    return -1;
+                }
+                return list.indexOf(selection);
+            }
+        };
+        Utils.GetSelectedIndex lambdaVideo = new Utils.GetSelectedIndex() {
+            public int getSelectedIndex(ArrayList list) {
+                String selection = MillicastManager.this.getSourceIdVideo();
+                if (list == null || selection == null) {
+                    return -1;
+                }
+                return list.indexOf(selection);
+            }
+        };
+
+        getMainActivity().runOnUiThread(() -> {
+            if (subscribeFragment == null) {
+                return;
+            }
+            if (isAudio == null) {
+                subscribeFragment.loadSourceSpinner(spinnerList, lambdaAudio, true, changed);
+                subscribeFragment.loadSourceSpinner(spinnerList, lambdaVideo, false, changed);
+                return;
+            }
+            if (isAudio) {
+                subscribeFragment.loadSourceSpinner(spinnerList, lambdaAudio, isAudio, changed);
+            } else {
+                subscribeFragment.loadSourceSpinner(spinnerList, lambdaVideo, isAudio, changed);
+
+            }
+        });
+        logD(TAG, logTag + "OK.");
+    }
+
+    /**
+     * Set the layerActiveList into the {@link SourceInfo} of the current projected video source.
+     * If a video source not currently projected, this would fail.
+     *
+     * @param layerActiveList
+     * @return True if a new layerActiveList was set, and false otherwise.
+     */
+    public boolean setLayerActiveList(LayerData[] layerActiveList) {
+        String logTag = "[Layer][Active][List][Set] ";
+        SourceInfo source = getSourceProjected(false);
+        if (source == null) {
+            logD(TAG, logTag + "Failed! No video source exists.");
+            return false;
+        }
+        if (source.setLayerActiveList(layerActiveList)) {
+            logD(TAG, logTag + "OK.");
+            // Reset the Layers UI in the view.
+            loadViewLayer();
+            return true;
+        } else {
+            logD(TAG, logTag + "OK. This list already exists.");
+            return false;
+        }
+    }
+
+    /**
+     * Get the layerId (from {@link SourceInfo#getLayerId}) list of the active layers of the
+     * currently projected video source.
+     * Return a list of size 0 if there is no projected video source.
+     * Otherwise, return a list that at least has an empty String ("") as the layer automatically selected by Millicast.
+     *
+     * @return
+     */
+    public ArrayList<String> getLayerActiveIdList() {
+        String logTag = "[Layer][Active][Id][List] ";
+
+        // Get the SourceInfo of the project source.
+        SourceInfo source = getSourceProjected(false);
+        ArrayList<String> list;
+        if (source == null) {
+            logD(TAG, logTag + "None. The projected video source cannot be found!");
+            list = new ArrayList<>();
+        } else {
+            list = source.getLayerActiveIdList();
+        }
+        return list;
+    }
+
+    /**
+     * Get the {@link SourceInfo#layerActiveId} of the selected Layer of the currently projected video source.
+     * An empty String ("") indicates that the layer is automatically selected by Millicast.
+     *
+     * @return The layerId, or null if there is no projected video source.
+     */
+    public String getLayerActiveId() {
+        String logTag = "[Layer][Active][Id][List] ";
+
+        // Get the SourceInfo of the projected source.
+        SourceInfo source = getSourceProjected(false);
+        if (source == null) {
+            logD(TAG, logTag + "None. The projected video source cannot be found!");
+            return null;
+        }
+        String id = source.getLayerActiveId();
+        logD(TAG, logTag + id + ".");
+        return id;
+    }
+
+    /**
+     * Get the Optional {@link LayerData} of the selected Layer of the currently projected video source.
+     * An empty Optional indicates that the layer is automatically selected by Millicast.
+     *
+     * @return The Optional or null if there is no active source.
+     */
+    public Optional<LayerData> getLayerData() {
+        String logTag = "[Layer][Active] ";
+
+        // Get the SourceInfo of the project source.
+        SourceInfo source = getSourceProjected(false);
+        if (source == null) {
+            logD(TAG, logTag + "None. The projected video source cannot be found!");
+            return null;
+        }
+        Optional<LayerData> layerDataOpt = source.getLayerData();
+        logD(TAG, logTag + "OK.");
+        return layerDataOpt;
+    }
+
+    /**
+     * Select a layer of the current video source based on its {@link SourceInfo#layerActiveId}.
+     * Will not perform selection if the layer has already been selected.
+     *
+     * @param layerId
+     * @return True if the Layer of the layerId was (or already) selected, false otherwise.
+     */
+    public boolean selectLayer(String layerId) {
+        String logTag = "[Layer][Select]:" + layerId + " ";
+        String log;
+
+        if (layerId == null) {
+            logD(TAG, logTag + "Failed! LayerId invalid.");
+            return false;
+        }
+
+        SourceInfo source = getSourceProjected(false);
+        if (source == null) {
+            logD(TAG, logTag + "Failed! No video source set.");
+            return false;
+        }
+
+        // Check if already selected.
+        String currentLayerId = getLayerActiveId();
+        if (layerId.equals(currentLayerId)) {
+            log = "OK. Already selected, not selecting again.";
+            logD(TAG, logTag + log);
+            return true;
+        }
+
+        // Get the layerData that we should select.
+        Optional<LayerData> layerData = source.getLayerData(layerId);
+        if (layerData == null) {
+            logD(TAG, logTag + "Failed! Unable to get Layer.");
+            return false;
+        }
+
+        // Perform layer selection and return the result.
+        if (subscriber.select(layerData)) {
+            logD(TAG, logTag + "OK.");
+            if (source.setLayerActiveId(layerId)) {
+                logD(TAG, logTag + "Set new layer active layerId.");
+            } else {
+                logD(TAG, logTag + "Error! Failed to set new layer active layerId!");
+            }
+            return true;
+        } else {
+            logD(TAG, logTag + "Failed! Could not select layer!");
+            return false;
+        }
+    }
+
+    /**
+     * Load the Layer UI in the view when the list of active sources change.
+     */
+    public void loadViewLayer() {
+        String logTag = "[View][Layer][Load] ";
+        if (subscribeFragment == null) {
+            logD(TAG, logTag + "Failed! The SubscribeFragment does not exist.");
+            return;
+        }
+        ArrayList<String> layerList = getLayerActiveIdList();
+        Utils.GetSelectedIndex lambda = new Utils.GetSelectedIndex() {
+            public int getSelectedIndex(ArrayList list) {
+                String selection = MillicastManager.this.getLayerActiveId();
+                if (list == null || selection == null) {
+                    return -1;
+                }
+                return list.indexOf(selection);
+            }
+        };
+        getMainActivity().runOnUiThread(() -> {
+            if (subscribeFragment != null) {
+                subscribeFragment.loadLayerSpinner(layerList, lambda);
+            }
+        });
+        logD(TAG, logTag + "OK.");
+    }
+
+    /**
+     * Add an empty Audio or Video Track, that can be used to project a Source
+     * received from Millicast.
+     *
+     * @param isAudio
+     * @return
+     */
+    public boolean addMediaTrack(boolean isAudio) {
+        String kind = "audio";
+        if (!isAudio) {
+            kind = "video";
+        }
+        return this.subscriber.addRemoteTrack(kind);
+    }
+
+    /**
+     * Get the Mid of a Subscribed track by the given trackId.
+     * The trackId can be obtained by calling {@link Track#getName()}.
+     *
+     * @param trackId
+     * @return
+     */
+    public String getTrackMidSub(String trackId) {
+        return this.subscriber.getMid(trackId).get();
+    }
+
 
     //**********************************************************************************************
     // Utilities
@@ -1910,7 +2454,7 @@ public class MillicastManager {
         }
         Log.d(logTag, "Publisher Listener removed.");
         if (subListener != null) {
-            subListener.setSubscribeFragment(null);
+            subscribeFragment = null;
         }
         Log.d(logTag, "Subscriber Listener removed.");
     }
@@ -1938,6 +2482,7 @@ public class MillicastManager {
             subAudioTrack = null;
             subAudioEnabled = false;
             subVideoEnabled = false;
+            sourceMap = null;
             Log.d(logTag, "Subscriber Video and Audio tracks released.");
         }
 
@@ -2904,9 +3449,10 @@ public class MillicastManager {
      *
      * @return
      */
-    private Subscriber getSubscriber() {
-        if (subscriber == null) {
+    public Subscriber getSubscriber() {
+        if (subscriber != null) {
             logD(TAG, "[getSubscriber] Returning existing Subscriber.");
+            return subscriber;
         }
 
         logD(TAG, "[getSubscriber] Trying to create one...");

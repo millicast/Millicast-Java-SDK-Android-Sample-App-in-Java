@@ -37,4 +37,8 @@
     <string name="ricoh_theta">Ricoh Theta</string>
     <string name="ndi_name_video">Millicast-AND-Video</string>
     <string name="ndi_name_audio">Millicast-AND-Audio</string>
+    <string name="source_video_changed">Video (!)</string>
+    <string name="source_audio_changed">Audio (!)</string>
+    <string name="source_audio">Audio</string>
+    <string name="source_video">Video</string>
 </resources>

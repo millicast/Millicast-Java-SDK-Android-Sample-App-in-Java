@@ -7,23 +7,83 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewParent;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.snackbar.Snackbar;
+import com.millicast.LayerData;
 import com.millicast.VideoRenderer;
 
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Utils {
 
     public static final String TAG = "Utils";
     static SharedPreferences sharedPreferences;
     static int maxLogLen = 1000;
+
+    //**********************************************************************************************
+    // Data structure
+    //**********************************************************************************************
+
+    /**
+     * Given a list of specified size and the current index, gets the next index.
+     * If at end of list, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param size      Size of the list.
+     * @param now       Current index of the list.
+     * @param ascending If true, cycle in the direction of increasing index,
+     *                  otherwise cycle in opposite direction.
+     * @param logTag
+     * @return
+     */
+    public static Integer indexNext(int size, int now, boolean ascending, String logTag) {
+        Integer next = null;
+        if (size < 1) {
+            logD(TAG, logTag + "Failed. List size was less than 1. Next: " + next + " Now: " + now);
+            return null;
+        }
+        if (ascending) {
+            if (now >= (size - 1)) {
+                next = 0;
+                logD(TAG, logTag + next + " (Cycling back to start)");
+            } else {
+                next = now + 1;
+                logD(TAG, logTag + next + " Incrementing index.");
+            }
+        } else {
+            if (now <= 0) {
+                next = size - 1;
+                logD(TAG, logTag + next + " (Cycling back to end)");
+            } else {
+                next = now - 1;
+                logD(TAG, logTag + next + " Decrementing index.");
+            }
+        }
+
+        if (next < 0) {
+            logD(TAG, logTag + "Failed. Next is invalid. Next: " + next + " Now: " + now);
+            return null;
+        }
+
+        logD(TAG, logTag + "Next: " + next + " Now: " + now);
+        return next;
+    }
+
+    //**********************************************************************************************
+    // Logging
+    //**********************************************************************************************
 
     /**
      * logcat truncates strings longer than a certain length.
@@ -40,26 +100,15 @@ public class Utils {
         }
     }
 
-    public static void removeFromParentView(VideoRenderer renderer, String logTag) {
-        ViewParent parent = renderer.getParent();
-        if (parent != null) {
-            ((FrameLayout) parent).removeAllViews();
-            Log.d(logTag, "Removed renderer from its previous parent.");
-        }
-    }
+    //**********************************************************************************************
+    // SharedPreferences
+    //**********************************************************************************************
 
-    /**
-     * Stop displaying video on UI.
-     *
-     * @param frameLayout The layout that might contain video.
-     * @param tag
-     */
-    public static void stopDisplayVideo(LinearLayout frameLayout, String tag) {
-        if (frameLayout != null) {
-            frameLayout.removeAllViews();
-            Log.d(tag, "[stopDisplayVideo] Removed video display.");
+    private static SharedPreferences getPref(Context context) {
+        if (sharedPreferences == null) {
+            sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         }
-        Log.d(tag, "[stopDisplayVideo] Video no longer on UI.");
+        return sharedPreferences;
     }
 
     /**
@@ -265,6 +314,88 @@ public class Utils {
         return value;
     }
 
+    //**********************************************************************************************
+    // Strings
+    //**********************************************************************************************
+
+    /**
+     * Get a string representing all element(s) of a {@link List}, separated by the given separator.
+     *
+     * @param itemList
+     * @param separator
+     * @param lambda    See {@link #getArrayStr(Object[], String, LambdaToString)}.
+     * @param <T>
+     * @return The representative string or an empty string if the list was null or empty.
+     */
+    public static <T> String getArrayStr(List<T> itemList, String separator, LambdaToString lambda) {
+        String result = "";
+        if (itemList == null || itemList.size() == 0) {
+            return result;
+        }
+        T[] itemArray = (T[]) itemList.toArray();
+        return getArrayStr(itemArray, separator, lambda);
+    }
+
+    /**
+     * Get a string representing all element(s) of an array, separated by the given separator.
+     *
+     * @param itemList
+     * @param separator
+     * @param lambda    A {@link LambdaToString} that takes an element of the itemList and
+     *                  generates its string representation that will be in the output.
+     *                  If set to null, this string representation will be generated by the
+     *                  {@link #toString()} method of the element.
+     * @param <T>
+     * @return The representative string or an empty string if the array was null or empty.
+     */
+    public static <T> String getArrayStr(T[] itemList, String separator, LambdaToString lambda) {
+        String result = "";
+        if (itemList == null || itemList.length == 0) {
+            return result;
+        }
+        for (T item : itemList) {
+            if (lambda != null) {
+                result += lambda.toString(item);
+            } else {
+                result += item.toString();
+            }
+            result += separator;
+        }
+        // Remove the last separator if any had been added.
+        result = result.substring(0, result.length() - separator.length());
+        return result;
+    }
+
+    public interface LambdaToString {
+        <T> String toString(T layerData);
+    }
+
+    //**********************************************************************************************
+    // Views
+    //**********************************************************************************************
+
+    public static void removeFromParentView(VideoRenderer renderer, String logTag) {
+        ViewParent parent = renderer.getParent();
+        if (parent != null) {
+            ((FrameLayout) parent).removeAllViews();
+            Log.d(logTag, "Removed renderer from its previous parent.");
+        }
+    }
+
+    /**
+     * Stop displaying video on UI.
+     *
+     * @param frameLayout The layout that might contain video.
+     * @param tag
+     */
+    public static void stopDisplayVideo(LinearLayout frameLayout, String tag) {
+        if (frameLayout != null) {
+            frameLayout.removeAllViews();
+            Log.d(tag, "[stopDisplayVideo] Removed video display.");
+        }
+        Log.d(tag, "[stopDisplayVideo] Video no longer on UI.");
+    }
+
     public static void makeSnackbar(String logTag, String msg, Fragment fragment) {
         MillicastManager.getSingleInstance().getMainActivity().runOnUiThread(() -> {
             logD(TAG, logTag + msg);
@@ -293,55 +424,88 @@ public class Utils {
         });
     }
 
-    private static SharedPreferences getPref(Context context) {
-        if (sharedPreferences == null) {
-            sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+    //**********************************************************************************************
+    // Views - Spinner
+    //**********************************************************************************************
+
+    /**
+     * Creates a spinner using the provided parameters.
+     *
+     * @param items
+     * @param spinner
+     * @param selected If not negative, will set spinner to select at this index.
+     * @param context
+     * @param listener
+     * @param <T>
+     */
+    public static <T> void populateSpinner(ArrayList<T> items, Spinner spinner, final int selected, Context context, OnItemSelected listener) {
+        ArrayAdapter<T> arrayAdapter = new ArrayAdapter<T>(context,
+                android.R.layout.simple_spinner_item,
+                items);
+        spinner.setAdapter(arrayAdapter);
+        spinner.setOnItemSelectedListener(itemSelectedGenerator(listener));
+        if (selected >= 0) {
+            spinner.setSelection(selected);
         }
-        return sharedPreferences;
     }
 
     /**
-     * Given a list of specified size and the current index, gets the next index.
-     * If at end of list, cycle to start of the other end.
-     * Returns null if none available.
+     * Populate a spinner using the provided parameters.
+     * If the lambda provided selected index is not negative, will set spinner to select at this index.
      *
-     * @param size      Size of the list.
-     * @param now       Current index of the list.
-     * @param ascending If true, cycle in the direction of increasing index,
-     *                  otherwise cycle in opposite direction.
-     * @param logTag
-     * @return
+     * @param spinnerList
+     * @param spinner
+     * @param lambda      {@link GetSelectedIndex} Lambda.
+     * @param context
+     * @param listener
+     * @param <T>
      */
-    public static Integer indexNext(int size, int now, boolean ascending, String logTag) {
-        Integer next = null;
-        if (size < 1) {
-            logD(TAG, logTag + "Failed. List size was less than 1. Next: " + next + " Now: " + now);
-            return null;
-        }
-        if (ascending) {
-            if (now >= (size - 1)) {
-                next = 0;
-                logD(TAG, logTag + next + " (Cycling back to start)");
-            } else {
-                next = now + 1;
-                logD(TAG, logTag + next + " Incrementing index.");
-            }
-        } else {
-            if (now <= 0) {
-                next = size - 1;
-                logD(TAG, logTag + next + " (Cycling back to end)");
-            } else {
-                next = now - 1;
-                logD(TAG, logTag + next + " Decrementing index.");
-            }
-        }
+    public static <T> void populateSpinner(ArrayList<T> spinnerList, Spinner spinner, final GetSelectedIndex lambda, Context context, OnItemSelected listener) {
+        String logTag = "[View][Spinner][Load] ";
+        ArrayAdapter<T> arrayAdapter = new ArrayAdapter<T>(context,
+                android.R.layout.simple_spinner_item,
+                spinnerList);
+        spinner.setAdapter(arrayAdapter);
+        spinner.setOnItemSelectedListener(itemSelectedGenerator(listener));
 
-        if (next < 0) {
-            logD(TAG, logTag + "Failed. Next is invalid. Next: " + next + " Now: " + now);
-            return null;
+        String selection = "N.A.";
+        int index = lambda.getSelectedIndex(spinnerList);
+        if (index >= 0) {
+            spinner.setSelection(index);
+            selection = (String) spinnerList.get(index);
         }
-
-        logD(TAG, logTag + "Next: " + next + " Now: " + now);
-        return next;
+        logD(TAG, logTag + "Selection:" + selection + " at index:" + index +
+                " of list:" + spinnerList + ".");
     }
+
+    /**
+     * Lambda interface that provides the selected index (at call time) of the given list.
+     * If no index is selected, return a negative integer.
+     *
+     * @param <T>
+     */
+    public interface GetSelectedIndex<T> {
+        default int getSelectedIndex(ArrayList<T> list) {
+            return -1;
+        }
+    }
+
+    public static AdapterView.OnItemSelectedListener itemSelectedGenerator(OnItemSelected lambda) {
+        return new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                lambda.onItemSelected(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        };
+    }
+
+    public interface OnItemSelected {
+        void onItemSelected(int position);
+    }
+
 }
