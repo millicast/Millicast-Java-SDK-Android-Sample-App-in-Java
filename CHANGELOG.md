@@ -2,6 +2,18 @@
 This file documents the release notes for each version of the Millicast Java SDK Android Sample App (SA) in Java.
 SA APIs refer to public methods provided by the SA class, MillicastManager.
 
+## 1.2.0 (2022-06-10)
+Upgraded to use SDK 1.2.0, added multisource sourceId & layer selection usage.
+### Major changes
+- Upgraded to new SDK 1.2.0.
+- Publisher able to specify sourceId for source published.
+- Subscriber able to select and project any active source received.
+- Subscriber able to select any active layer from the video source currently projected.
+### Fixed
+- N.A.
+### Known issues
+- As before.
+
 ## 1.1.2 (2022-04-27)
 Upgraded to use SDK 1.1.4, fixed Subscribe Token usage.
 ### Major changes
@@ -44,7 +56,7 @@ Upgraded to features of SDK 1.1, improved handling of NDI input/output, and impr
   - By default front facing camera(s) will be mirrored.
 - New UI controls for Publish view:
   - Refresh: Refresh available audio and video sources.
-  - Miror: Mirror the local rendering of captured video.
+  - Mirror: Mirror the local rendering of captured video.
 - New UI controls for both Publish & Subscribe views:
   - Tap on video view to hide/unhide UI controls.
   - Scale: Scale the local rendering of video using 3 possible scaling options.
