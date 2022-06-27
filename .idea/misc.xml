@@ -3,26 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
-        <entry key="../../../../layout/custom_preview.xml" value="0.3824074074074074" />
-        <entry key="app/src/main/res/layout-land/fragment_subscribe.xml" value="0.1" />
-        <entry key="app/src/main/res/layout/fragment_publish.xml" value="0.1828774062816616" />
-        <entry key="app/src/main/res/layout/fragment_set_mc.xml" value="0.22010869565217392" />
-        <entry key="app/src/main/res/layout/fragment_set_media.xml" value="0.1" />
-        <entry key="app/src/main/res/layout/fragment_subscribe.xml" value="0.12916666666666668" />
+        <entry key="app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.19" />
       </map>
     </option>
   </component>
-  <component name="JavadocGenerationManager">
-    <option name="OUTPUT_DIRECTORY" value="$PROJECT_DIR$/JavaDoc" />
-    <option name="OPTION_SCOPE" value="private" />
-    <option name="OTHER_OPTIONS" value="--ignore-source-errors" />
-    <option name="OPEN_IN_BROWSER" value="false" />
-    <option name="OPTION_INCLUDE_LIBS" value="true" />
-  </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="11" project-jdk-type="JavaSDK">
-    <output url="file://$PROJECT_DIR$/build/classes" />
-  </component>
-  <component name="ProjectType">
-    <option name="id" value="Android" />
-  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="11" project-jdk-type="JavaSDK" />
 </project>
