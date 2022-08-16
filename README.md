@@ -127,15 +127,21 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
      - This may sometimes result in the active layers disappearing and appearing.
 1. To stop subscribing, click "STOP SUBSCRIBE".
 
+# Settings pages
+- Account setting changes on the UI are not applied until the apply button is tapped.
+  - Setting fields change color to alert user when UI values differ from applied values.
+- Subscribe Token
+  - If the publisher settings requires a secure viewer, a valid Subscribe Token has to be set.
+  - If a secure viewer is **not** required:
+    - The following values for the Subscriber Token field are acceptable:
+      - Completely blank (no white spaces).
+      - A valid Subscriber Token.
+    - Any other values may result in failure to connect.
+  - More details on Subscribe Token [here](https://docs.millicast.com/docs/secure-the-millicast-viewer-api#create-a-subscribe-token).
+
 # Miscellaneous
 - Tap on video view to hide/unhide UI controls.
 - Tap on the scale button (appears by default as "FIT") to scale the local rendering of video, cycling between using 3 possible scaling options.
 - The local video view of Publisher is mirrored by default for front facing camera(s).
-  - This is to acheive a more natural mirror like effect for the Publisher locally.
+  - This is to achieve a more natural mirror like effect for the Publisher locally.
   - Mirroring effect is only local and does not affect remote view.
-- If the publisher settings requires a secure viewer, a valid Subscriber Token has to be set in the Settings - Millicast page.
-  - If a secured viewer is **not** required:
-    - The following values for the Subscriber Token field are acceptable:
-      - Completely blank (no white spaces).
-      - A valid Subscriber Token.
-    - Any other values will result in failure to connect.

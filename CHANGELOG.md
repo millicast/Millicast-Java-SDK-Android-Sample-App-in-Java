@@ -2,6 +2,17 @@
 This file documents the release notes for each version of the Millicast Java SDK Android Sample App (SA) in Java.
 SA APIs refer to public methods provided by the SA class, MillicastManager.
 
+## 1.3.0 (2022-08-16)
+Upgraded to use SDK 1.3.0, updated SA logo, and updated readme.
+### Major changes
+- Upgraded to new SDK 1.3.0.
+- Updated SA logo.
+- Updated ***README.md*** for Settings usage.
+### Fixed
+- N.A.
+### Known issues
+- As before.
+
 ## 1.2.0 (2022-06-10)
 Upgraded to use SDK 1.2.0, added multisource sourceId & layer selection usage.
 ### Major changes
