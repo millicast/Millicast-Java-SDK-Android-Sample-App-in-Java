@@ -33,8 +33,11 @@ import static com.millicast.android_app.MillicastManager.keyStreamNamePub;
 import static com.millicast.android_app.MillicastManager.keyStreamNameSub;
 import static com.millicast.android_app.MillicastManager.keyUrlSub;
 
-public class SetMcFragment extends Fragment {
-    public static final String TAG = "SetMcFragment";
+/**
+ * UI for Millicast platform settings.
+ */
+public class SettingsMcFragment extends Fragment {
+    public static final String TAG = "SettingsMcFragment";
     Drawable backgroundOriginal;
     private final MillicastManager mcManager;
     private Switch switchRicohTheta;
@@ -63,7 +66,7 @@ public class SetMcFragment extends Fragment {
     private Button buttonApply;
     private Button buttonApplySave;
 
-    public SetMcFragment() {
+    public SettingsMcFragment() {
         mcManager = MillicastManager.getSingleInstance();
     }
 

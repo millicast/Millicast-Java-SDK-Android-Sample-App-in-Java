@@ -10,62 +10,65 @@ import org.webrtc.RTCStatsReport;
 import java.util.ArrayList;
 import java.util.Optional;
 
-import static com.millicast.android_app.MillicastManager.SubscriberState.CONNECTED;
-import static com.millicast.android_app.MillicastManager.SubscriberState.SUBSCRIBING;
+import static com.millicast.android_app.MCStates.SubscriberState.CONNECTED;
+import static com.millicast.android_app.MCStates.SubscriberState.SUBSCRIBING;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
+/**
+ * Implementation of Subscriber's Listener.
+ * This handles events sent to the Subscriber being listened to.
+ */
 public class SubListener implements Subscriber.Listener {
     public static final String TAG = "SubListener";
 
-    private final MillicastManager mcManager;
+    private final MillicastManager mcMan;
     private String logTag = "[Sub][Ltn]";
 
     public SubListener() {
-        mcManager = MillicastManager.getSingleInstance();
+        mcMan = MillicastManager.getSingleInstance();
     }
 
     @Override
     public void onSubscribed() {
-        mcManager.setSubState(SUBSCRIBING);
+        mcMan.setSubState(SUBSCRIBING);
         setUI();
         String logTag = this.logTag + "[On] ";
-        makeSnackbar(logTag, "Subscribing", mcManager.getSubFragment());
+        makeSnackbar(logTag, "Subscribing", mcMan.getFragmentSub());
     }
 
     @Override
     public void onSubscribedError(String s) {
         String logTag = this.logTag + "[Error] ";
-        makeSnackbar(logTag, "Subscribe Error:" + s, mcManager.getSubFragment());
+        makeSnackbar(logTag, "Subscribe Error:" + s, mcMan.getFragmentSub());
     }
 
     @Override
     public void onConnected() {
         String logTag = this.logTag + "[Con][On] ";
-        mcManager.setSubState(CONNECTED);
-        mcManager.enableSubStats(1000);
-        makeSnackbar(logTag, "Connected", mcManager.getSubFragment());
-        mcManager.startSubscribe();
+        mcMan.setSubState(CONNECTED);
+        makeSnackbar(logTag, "Connected", mcMan.getFragmentSub());
+        mcMan.startSub();
     }
 
     @Override
     public void onConnectionError(String reason) {
         String logTag = this.logTag + "[Con][Error] ";
-        mcManager.setSubState(MillicastManager.SubscriberState.DISCONNECTED);
+        mcMan.setSubState(MCStates.SubscriberState.DISCONNECTED);
         setUI();
-        makeSnackbar(logTag, "Connection FAILED! " + reason, mcManager.getSubFragment());
+        makeSnackbar(logTag, "Connection FAILED! " + reason, mcMan.getFragmentSub());
     }
 
     @Override
     public void onStopped() {
-        String logTag = "[Sub][Stop] ";
+        String logTag = "[Sub][Ltn][Stop] ";
         logD(TAG, logTag + "OK.");
     }
 
     @Override
     public void onSignalingError(String s) {
         String logTag = this.logTag + "[Sig][Error] ";
-        makeSnackbar(logTag, "Signaling Error:" + s, mcManager.getSubFragment());
+        makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentSub());
     }
 
     @Override
@@ -79,24 +82,24 @@ public class SubListener implements Subscriber.Listener {
     public void onTrack(VideoTrack videoTrack, Optional<String> mid) {
         String logTag = this.logTag + "[Track][Video] ";
         String trackId = videoTrack.getName();
-        mcManager.setMidVideo(mid.get());
+        mcMan.setMidVideo(mid.get());
         logD(TAG, logTag + "Name: " + trackId + ", TransceiverId: " + mid + " has been negotiated.");
 
-        mcManager.setRenderSubVideo(videoTrack);
+        mcMan.subRenderVideo(videoTrack);
         setUI();
-        makeSnackbar(logTag, "Video received", mcManager.getSubFragment());
+        makeSnackbar(logTag, "Video received", mcMan.getFragmentSub());
     }
 
     @Override
     public void onTrack(AudioTrack audioTrack, Optional<String> mid) {
         String logTag = this.logTag + "[Track][Audio] ";
         String trackId = audioTrack.getName();
-        mcManager.setMidAudio(mid.get());
+        mcMan.setMidAudio(mid.get());
         logD(TAG, logTag + "Name: " + trackId + ", TransceiverId: " + mid + " has been negotiated.");
-        mcManager.setSubAudioTrack(audioTrack);
-        mcManager.setSubAudioEnabled(true);
+        mcMan.setAudioTrackSub(audioTrack);
+        mcMan.setAudioEnabledSub(true);
         setUI();
-        makeSnackbar(logTag, "Audio received", mcManager.getSubFragment());
+        makeSnackbar(logTag, "Audio received", mcMan.getFragmentSub());
     }
 
     @Override
@@ -139,12 +142,12 @@ public class SubListener implements Subscriber.Listener {
         );
 
         logD(TAG, logTag + "Adding active source...");
-        mcManager.addSource(source, sourceInfo);
+        mcMan.addSource(source, sourceInfo);
         if (sourceInfo.hasAudio()) {
-            mcManager.loadViewSource(true, true);
+            mcMan.loadViewSource(true, true);
         }
         if (sourceInfo.hasVideo()) {
-            mcManager.loadViewSource(false, true);
+            mcMan.loadViewSource(false, true);
         }
     }
 
@@ -161,16 +164,16 @@ public class SubListener implements Subscriber.Listener {
             logD(TAG, logTag + "This source has no sourceId and so represents the default/main source.");
         }
         logD(TAG, logTag + "Removing inactive source (streamId: " + streamId + ")...");
-        SourceInfo sourceInfo = mcManager.removeSource(source);
+        SourceInfo sourceInfo = mcMan.removeSource(source);
         if (sourceInfo == null) {
             logD(TAG, logTag + "Failed! Unable to find the Source of this sourceId!");
             return;
         }
         if (sourceInfo.hasAudio()) {
-            mcManager.loadViewSource(true, true);
+            mcMan.loadViewSource(true, true);
         }
         if (sourceInfo.hasVideo()) {
-            mcManager.loadViewSource(false, true);
+            mcMan.loadViewSource(false, true);
         }
     }
 
@@ -190,7 +193,7 @@ public class SubListener implements Subscriber.Listener {
                 SourceInfo.getLayerListStr(inactiveLayers) + "].";
 
         logD(TAG, logTag + log);
-        mcManager.setLayerActiveList(activeLayers);
+        mcMan.setLayerActiveList(activeLayers);
     }
 
     /**
@@ -228,8 +231,8 @@ public class SubListener implements Subscriber.Listener {
      * Set UI states if containing view is available.
      */
     private void setUI() {
-        mcManager.getMainActivity().runOnUiThread(() -> {
-            SubscribeFragment subscribeFragment = mcManager.getSubFragment();
+        mcMan.getMainActivity().runOnUiThread(() -> {
+            SubscribeFragment subscribeFragment = mcMan.getFragmentSub();
             if (subscribeFragment != null) {
                 subscribeFragment.setUI();
             }

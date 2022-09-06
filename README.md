@@ -137,7 +137,7 @@ The Android Java Sample App (SA) demonstrates how the Millicast Java SDK can be 
       - Completely blank (no white spaces).
       - A valid Subscriber Token.
     - Any other values may result in failure to connect.
-  - More details on Subscribe Token [here](https://docs.millicast.com/docs/secure-the-millicast-viewer-api#create-a-subscribe-token).
+  - More details on Subscribe Token [here](https://docs.dolby.io/streaming-apis/docs/secure-viewer-api#create-a-subscribe-token).
 
 # Miscellaneous
 - Tap on video view to hide/unhide UI controls.

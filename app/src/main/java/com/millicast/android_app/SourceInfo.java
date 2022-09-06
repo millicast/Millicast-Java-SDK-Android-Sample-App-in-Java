@@ -13,7 +13,8 @@ import java.util.HashMap;
 import java.util.Optional;
 
 /**
- * This class contains information about a particular media source that we subscribe to.
+ * Information about a subscribed media source.
+ * This includes: Media sourceId, lists of audio and video trackIds, and lists of layers.
  */
 public class SourceInfo {
 

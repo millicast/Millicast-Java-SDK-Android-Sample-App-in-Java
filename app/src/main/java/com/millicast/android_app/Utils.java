@@ -26,6 +26,9 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Utility methods used in the SA.
+ */
 public class Utils {
 
     public static final String TAG = "Utils";

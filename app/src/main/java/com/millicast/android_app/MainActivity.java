@@ -17,6 +17,10 @@ import androidx.fragment.app.FragmentManager;
 
 import com.google.android.material.navigation.NavigationView;
 
+/**
+ * Entry point to Sample Application (SA) for the Millicast Android SDK.
+ * It initialises the {@link MillicastManager} with the ApplicationContext.
+ */
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     public static final String TAG = "MainActivity";
     private static Context context;
@@ -99,9 +103,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         } else if (id == R.id.nav_subscribe) {
             fragment = new SubscribeFragment();
         } else if (id == R.id.nav_settings_mc) {
-            fragment = new SetMcFragment();
+            fragment = new SettingsMcFragment();
         } else if (id == R.id.nav_settings_media) {
-            fragment = new SetMediaFragment();
+            fragment = new SettingsMediaFragment();
         }
 
         if (fragment != null) {

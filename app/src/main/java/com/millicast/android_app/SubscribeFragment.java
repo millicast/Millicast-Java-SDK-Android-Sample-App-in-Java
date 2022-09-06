@@ -35,6 +35,9 @@ import static com.millicast.android_app.Utils.populateSpinner;
 import java.util.ArrayList;
 import java.util.Optional;
 
+/**
+ * UI for subscribing.
+ */
 public class SubscribeFragment extends Fragment {
     public static final String TAG = "SubscribeFragment";
 
@@ -60,7 +63,7 @@ public class SubscribeFragment extends Fragment {
         this.mcManager = MillicastManager.getSingleInstance();
 
         // Set this view into listeners/handlers
-        mcManager.setSubView(this);
+        mcManager.setViewSub(this);
 
         // Set buttons again in case states changed while subListener had no access to this view.
         setUI();
@@ -142,10 +145,10 @@ public class SubscribeFragment extends Fragment {
      * @param view
      */
     private void toggleAudio(View view) {
-        AudioTrack track = mcManager.getSubAudioTrack();
+        AudioTrack track = mcManager.getAudioTrackSub();
         if (track != null) {
-            track.setEnabled(!mcManager.isSubAudioEnabled());
-            mcManager.setSubAudioEnabled(!mcManager.isSubAudioEnabled());
+            track.setEnabled(!mcManager.isAudioEnabledSub());
+            mcManager.setAudioEnabledSub(!mcManager.isAudioEnabledSub());
             setUI();
         }
     }
@@ -156,10 +159,10 @@ public class SubscribeFragment extends Fragment {
      * @param view
      */
     private void toggleVideo(View view) {
-        VideoTrack track = mcManager.getSubVideoTrack();
+        VideoTrack track = mcManager.getVideoTrackSub();
         if (track != null) {
-            track.setEnabled(!mcManager.isSubVideoEnabled());
-            mcManager.setSubVideoEnabled(!mcManager.isSubVideoEnabled());
+            track.setEnabled(!mcManager.isVideoEnabledSub());
+            mcManager.setVideoEnabledSub(!mcManager.isVideoEnabledSub());
             setUI();
         }
     }
@@ -195,7 +198,7 @@ public class SubscribeFragment extends Fragment {
     private void onStartSubscribeClicked(View view) {
         Log.d(TAG, "Start Subscribe clicked.");
         displaySubVideo();
-        mcManager.subConnect();
+        mcManager.connectSub();
         setUI();
     }
 
@@ -205,7 +208,7 @@ public class SubscribeFragment extends Fragment {
         // Display video if not already displayed.
         if (linearLayoutVideo.getChildCount() == 0) {
             // Get remote video renderer.
-            VideoRenderer subRenderer = mcManager.getSubRenderer();
+            VideoRenderer subRenderer = mcManager.getRendererSub();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(subRenderer, TAG);
             // Finally, add our renderer to our frame layout.
@@ -218,7 +221,7 @@ public class SubscribeFragment extends Fragment {
 
     private void onStopSubscribeClicked(View view) {
         Log.d(TAG, "Stop Subscribe clicked.");
-        mcManager.stopSubscribe();
+        mcManager.stopSub();
         Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         setUI();
     }
@@ -303,14 +306,14 @@ public class SubscribeFragment extends Fragment {
         int label;
         if (isAudio) {
             logTagLoad += "[Audio] ";
-            currentSource = mcManager.getSourceIdAudio();
+            currentSource = mcManager.getSourceIdAudioSub();
             source = mcManager.getSourceProjected(true);
             spinner = spinnerSourceAudio;
             textView = textViewSourceAudio;
             label = R.string.source_audio;
         } else {
             logTagLoad += "[Video] ";
-            currentSource = mcManager.getSourceIdVideo();
+            currentSource = mcManager.getSourceIdVideoSub();
             source = mcManager.getSourceProjected(false);
             spinner = spinnerSourceVideo;
             textView = textViewSourceVideo;
@@ -402,7 +405,7 @@ public class SubscribeFragment extends Fragment {
         final Spinner spinner = spinnerLayer;
 
         Optional<LayerData> currentLayer = mcManager.getLayerData();
-        logLoad = "Current Source:" + mcManager.getSourceIdVideo() + " Layer:" +
+        logLoad = "Current Source:" + mcManager.getSourceIdVideoSub() + " Layer:" +
                 SourceInfo.getLayerStr(currentLayer, true) + ".";
         logD(TAG, logTagLoad + logLoad);
 
@@ -498,12 +501,12 @@ public class SubscribeFragment extends Fragment {
                 buttonSubscribe.setEnabled(true);
                 buttonAudio.setEnabled(true);
                 buttonVideo.setEnabled(true);
-                if (mcManager.isSubAudioEnabled()) {
+                if (mcManager.isAudioEnabledSub()) {
                     buttonAudio.setText(R.string.muteAudio);
                 } else {
                     buttonAudio.setText(R.string.unmuteAudio);
                 }
-                if (mcManager.isSubVideoEnabled()) {
+                if (mcManager.isVideoEnabledSub()) {
                     buttonVideo.setText(R.string.muteVideo);
                 } else {
                     buttonVideo.setText(R.string.unmuteVideo);

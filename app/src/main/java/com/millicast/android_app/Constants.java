@@ -1,5 +1,11 @@
 package com.millicast.android_app;
 
+/**
+ * Values for Millicast related constants.
+ * Fill in the desired values for these constants as required.
+ * These values can be edited in the Millicast Settings UI.
+ * The UI also provides a way to reload the file values here.
+ */
 public final class Constants {
 
     // Set the following as default values if desired.

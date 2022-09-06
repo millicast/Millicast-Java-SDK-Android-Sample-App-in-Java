@@ -16,9 +16,9 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 /**
- * A simple {@link Fragment} subclass.
+ * UI for Media Settings.
  */
-public class SetMediaFragment extends Fragment {
+public class SettingsMediaFragment extends Fragment {
     public static final String TAG = "SetMediaFragment";
     private final MillicastManager mcManager;
     private Button buttonRefresh;
@@ -26,7 +26,7 @@ public class SetMediaFragment extends Fragment {
     private Spinner spinnerVideoSource;
     private Spinner spinnerAudioSource;
 
-    public SetMediaFragment() {
+    public SettingsMediaFragment() {
         mcManager = MillicastManager.getSingleInstance();
     }
 

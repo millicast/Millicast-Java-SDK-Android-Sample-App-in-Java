@@ -7,7 +7,7 @@
     android:isScrollContainer="false"
     android:orientation="vertical"
     android:verticalScrollbarPosition="defaultPosition"
-    tools:context=".SetMcFragment">
+    tools:context=".SettingsMcFragment">
 
     <ScrollView
         android:layout_width="match_parent"

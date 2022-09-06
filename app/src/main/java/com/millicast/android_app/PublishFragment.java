@@ -20,11 +20,15 @@ import com.millicast.VideoTrack;
 
 import org.webrtc.RendererCommon;
 
+import static com.millicast.android_app.MCStates.*;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.MillicastManager.keyConVisible;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
+/**
+ * UI for publishing.
+ */
 public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
@@ -53,7 +57,7 @@ public class PublishFragment extends Fragment {
         mcManager = MillicastManager.getSingleInstance();
 
         // Set this view into listeners/handlers
-        mcManager.setPubView(this);
+        mcManager.setViewPub(this);
 
         // Set buttons again in case states changed while vidSrcEvtHdl had no access to this view.
         setUI();
@@ -202,7 +206,7 @@ public class PublishFragment extends Fragment {
     // Capture
     //**********************************************************************************************
 
-    void refreshMediaSources(View view){
+    void refreshMediaSources(View view) {
         mcManager.refreshMediaLists();
     }
 
@@ -233,10 +237,10 @@ public class PublishFragment extends Fragment {
      * @param view
      */
     private void toggleAudio(View view) {
-        AudioTrack track = mcManager.getPubAudioTrack();
+        AudioTrack track = mcManager.getAudioTrackPub();
         if (track != null) {
-            track.setEnabled(!mcManager.isPubAudioEnabled());
-            mcManager.setPubAudioEnabled(!mcManager.isPubAudioEnabled());
+            track.setEnabled(!mcManager.isAudioEnabledPub());
+            mcManager.setAudioEnabledPub(!mcManager.isAudioEnabledPub());
             setUI();
         }
     }
@@ -247,10 +251,10 @@ public class PublishFragment extends Fragment {
      * @param view
      */
     private void toggleVideo(View view) {
-        VideoTrack track = mcManager.getPubVideoTrack();
+        VideoTrack track = mcManager.getVideoTrackPub();
         if (track != null) {
-            track.setEnabled(!mcManager.isPubVideoEnabled());
-            mcManager.setPubVideoEnabled(!mcManager.isPubVideoEnabled());
+            track.setEnabled(!mcManager.isVideoEnabledPub());
+            mcManager.setVideoEnabledPub(!mcManager.isVideoEnabledPub());
             setUI();
         }
     }
@@ -263,7 +267,7 @@ public class PublishFragment extends Fragment {
         String tag = "[displayPubVideo] ";
         // Display video if not already displayed.
         if (linearLayoutVideo.getChildCount() == 0) {
-            VideoRenderer pubRenderer = mcManager.getPubRenderer();
+            VideoRenderer pubRenderer = mcManager.getRendererPub();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(pubRenderer, TAG);
             // Finally, add our renderer to our frame layout.
@@ -307,14 +311,14 @@ public class PublishFragment extends Fragment {
         if (linearLayoutVideo != null) {
             mcManager.switchMirror(true);
         }
-        log = mcManager.isPubMirrored() + ".";
+        log = mcManager.isMirroredPub() + ".";
         makeSnackbar(logTag, log, this);
         setUI();
     }
 
     private void setButtonMirrorText() {
         String mirror = "Mirror:";
-        if(mcManager.isPubMirrored()){
+        if (mcManager.isMirroredPub()) {
             mirror += "T";
         } else {
             mirror += "F";
@@ -328,13 +332,13 @@ public class PublishFragment extends Fragment {
 
     private void onStartPublishClicked(View view) {
         Log.d(TAG, "Start Publish clicked.");
-        mcManager.pubConnect();
+        mcManager.connectPub();
         setUI();
     }
 
     private void onStopPublishClicked(View view) {
         Log.d(TAG, "Stop Publish clicked.");
-        mcManager.stopPublish();
+        mcManager.stopPub();
         setUI();
     }
 
@@ -431,10 +435,10 @@ public class PublishFragment extends Fragment {
 
         boolean readyToPublish = false;
         boolean canChangeCapture = false;
-        if (mcManager.getCapState() == MillicastManager.CaptureState.IS_CAPTURED) {
+        if (mcManager.getCapState() == CaptureState.IS_CAPTURED) {
             readyToPublish = true;
         }
-        if (mcManager.getPubState() == MillicastManager.PublisherState.DISCONNECTED) {
+        if (mcManager.getPubState() == PublisherState.DISCONNECTED) {
             canChangeCapture = true;
         }
 
@@ -469,7 +473,7 @@ public class PublishFragment extends Fragment {
         }
 
         if (!readyToPublish) {
-            if (MillicastManager.PublisherState.DISCONNECTED == mcManager.getPubState()) {
+            if (PublisherState.DISCONNECTED == mcManager.getPubState()) {
                 buttonPublish.setText(R.string.notPublishing);
                 buttonPublish.setEnabled(false);
                 return;
@@ -505,12 +509,12 @@ public class PublishFragment extends Fragment {
         if (isCaptured) {
             buttonAudio.setEnabled(true);
             buttonVideo.setEnabled(true);
-            if (mcManager.isPubAudioEnabled()) {
+            if (mcManager.isAudioEnabledPub()) {
                 buttonAudio.setText(R.string.muteAudio);
             } else {
                 buttonAudio.setText(R.string.unmuteAudio);
             }
-            if (mcManager.isPubVideoEnabled()) {
+            if (mcManager.isVideoEnabledPub()) {
                 buttonVideo.setText(R.string.muteVideo);
             } else {
                 buttonVideo.setText(R.string.unmuteVideo);

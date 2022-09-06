@@ -4,61 +4,61 @@ import com.millicast.Publisher;
 
 import org.webrtc.RTCStatsReport;
 
-import java.util.Optional;
-
-import static com.millicast.android_app.MillicastManager.PublisherState.CONNECTED;
-import static com.millicast.android_app.MillicastManager.PublisherState.DISCONNECTED;
-import static com.millicast.android_app.MillicastManager.PublisherState.PUBLISHING;
+import static com.millicast.android_app.MCStates.PublisherState.CONNECTED;
+import static com.millicast.android_app.MCStates.PublisherState.DISCONNECTED;
+import static com.millicast.android_app.MCStates.PublisherState.PUBLISHING;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
+/**
+ * Implementation of Publisher's Listener.
+ * This handles events sent to the Publisher being listened to.
+ */
 public class PubListener implements Publisher.Listener {
     public static final String TAG = "PubListener";
 
-    private PublishFragment publishFragment;
-    private MillicastManager mcManager;
+    private MillicastManager mcMan;
     private String logTag = "[Pub][Ltn]";
 
     public PubListener() {
-        mcManager = MillicastManager.getSingleInstance();
+        mcMan = MillicastManager.getSingleInstance();
     }
 
     @Override
     public void onPublishing() {
-        mcManager.setPubState(PUBLISHING);
+        mcMan.setPubState(PUBLISHING);
         setUI();
         String logTag = this.logTag + "[On] ";
-        makeSnackbar(logTag, "Publishing", publishFragment);
+        makeSnackbar(logTag, "OK. Publish started.", mcMan.getFragmentPub());
     }
 
     @Override
     public void onPublishingError(String s) {
         String logTag = this.logTag + "[Error] ";
-        makeSnackbar(logTag, "Publish Error:" + s, publishFragment);
+        makeSnackbar(logTag, "Publish Error:" + s, mcMan.getFragmentPub());
     }
 
     @Override
     public void onConnected() {
         String logTag = this.logTag + "[Con][On] ";
-        mcManager.setPubState(CONNECTED);
-        mcManager.enablePubStats(1000);
+        mcMan.setPubState(CONNECTED);
         setUI();
-        makeSnackbar(logTag, "Connected", publishFragment);
-        mcManager.startPublish();
+        makeSnackbar(logTag, "Connected", mcMan.getFragmentPub());
+        mcMan.startPub();
     }
 
     @Override
     public void onConnectionError(String reason) {
         String logTag = this.logTag + "[Con][Error] ";
-        mcManager.setPubState(DISCONNECTED);
+        mcMan.setPubState(DISCONNECTED);
         setUI();
-        makeSnackbar(logTag, "Connection FAILED! " + reason, publishFragment);
+        makeSnackbar(logTag, "Connection FAILED! " + reason, mcMan.getFragmentPub());
     }
 
     @Override
     public void onSignalingError(String s) {
         String logTag = this.logTag + "[Sig][Error] ";
-        makeSnackbar(logTag, "Signaling Error:" + s, publishFragment);
+        makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentPub());
     }
 
     @Override
@@ -86,18 +86,12 @@ public class PubListener implements Publisher.Listener {
         logD(TAG, logTag + "No viewers are currently subscribed to our stream.");
     }
 
-    public void setPublishFragment(PublishFragment publishFragment) {
-        this.publishFragment = publishFragment;
-    }
-
     /**
      * Set UI states if containing view is available.
      */
     private void setUI() {
-        if (publishFragment == null) {
-            return;
-        }
-        mcManager.getMainActivity().runOnUiThread(() -> {
+        mcMan.getMainActivity().runOnUiThread(() -> {
+            PublishFragment publishFragment = mcMan.getFragmentPub();
             if (publishFragment != null) {
                 publishFragment.setUI();
             }

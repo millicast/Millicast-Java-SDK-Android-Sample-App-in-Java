@@ -43,54 +43,52 @@ import static com.millicast.android_app.Constants.STREAM_NAME_PUB;
 import static com.millicast.android_app.Constants.STREAM_NAME_SUB;
 import static com.millicast.android_app.Constants.TOKEN_SUB;
 import static com.millicast.android_app.Constants.URL_SUB;
+import static com.millicast.android_app.MCStates.*;
 import static com.millicast.android_app.MillicastManager.Source.CURRENT;
 import static com.millicast.android_app.Utils.getArrayStr;
 import static com.millicast.android_app.Utils.logD;
 import static org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT;
 
+/**
+ * The {@link MillicastManager} helps to manage the Millicast SDK and provides
+ * a simple set of public APIs for common operations so that UI layer can achieve goals
+ * such as publishing / subscribing without knowledge of SDK operations.
+ * It takes care of:
+ * - Important operations using the SDK, such as managing audio/video sources and renderers,
+ * Publisher/Subscriber credentials, options and preferred codecs.
+ * - Managing Millicast related states to ensure operations are valid before executing them.
+ */
 public class MillicastManager {
     public static final String TAG = "MCM";
-    public static String keyAccountId = "ACCOUNT_ID";
-    public static String keyStreamNamePub = "STREAM_NAME_PUB";
-    public static String keyStreamNameSub = "STREAM_NAME_SUB";
-    public static String keyTokenPub = "TOKEN_PUB";
-    public static String keyTokenSub = "TOKEN_SUB";
-    public static String keyUrlPub = "URL_PUB";
-    public static String keyUrlSub = "URL_SUB";
-    public static String keySourceIdPub = "SOURCE_ID_PUB";
-    public static String keySourceIdPubEnabled = "SOURCE_ID_PUB_ENABLED";
-    public static String keyRicohTheta = "RICOH_THETA";
-    public static String keyConVisible = "CON_VISIBLE";
 
     private static MillicastManager SINGLE_INSTANCE;
 
     private Context context;
     private Activity mainActivity;
 
-    // Whether the camera is locked by our App.
+    // States: Millicast
+    private CaptureState capState = CaptureState.NOT_CAPTURED;
+    private PublisherState pubState = PublisherState.DISCONNECTED;
+    private SubscriberState subState = SubscriberState.DISCONNECTED;
+
+    // States: Audio/Video mute.
+    private boolean audioEnabledPub = false;
+    private boolean videoEnabledPub = false;
+    private boolean audioEnabledSub = false;
+    private boolean videoEnabledSub = false;
+    private boolean ndiOutputVideo = false;
+    private boolean ndiOutputAudio = false;
+
+    // States: Ricoh Theta only states.
+    private boolean isRicohTheta = false;
+    /**
+     * Whether the Ricoh Theta camera is locked by our App.
+     */
     private boolean isCameraLocked = false;
-    // Set to true if camera should be restarted after switching to another App.
+    /**
+     * Set to true if camera should be restarted after switching to another App.
+     */
     private boolean toRelockCamera = false;
-
-    enum CaptureState {
-        NOT_CAPTURED,
-        TRY_CAPTURE,
-        IS_CAPTURED
-    }
-
-    enum PublisherState {
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED,
-        PUBLISHING
-    }
-
-    enum SubscriberState {
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED,
-        SUBSCRIBING
-    }
 
     /**
      * The source of a setting value to read from or to write to.
@@ -110,20 +108,11 @@ public class MillicastManager {
         SAVED;
     }
 
-    private CaptureState capState = CaptureState.NOT_CAPTURED;
-    private PublisherState pubState = PublisherState.DISCONNECTED;
-    private SubscriberState subState = SubscriberState.DISCONNECTED;
-
-    private boolean pubAudioEnabled = false;
-    private boolean pubVideoEnabled = false;
-    private boolean subAudioEnabled = false;
-    private boolean subVideoEnabled = false;
-    private boolean ndiOutputVideo = false;
-    private boolean ndiOutputAudio = false;
-
     /**
-     * Millicast platform values.
-     * Assign {@link Constants} values as default values.
+     * Millicast platform & credential values.
+     * Default values are assign from {@link Constants},
+     * and updated with values in device memory, if these exist.
+     * These can also be modified from the UI at the Millicast Settings page.
      */
     private String accountId = ACCOUNT_ID;
     private String streamNamePub = STREAM_NAME_PUB;
@@ -134,25 +123,24 @@ public class MillicastManager {
     private boolean sourceIdPubEnabled = SOURCE_ID_PUB_ENABLED;
     private String urlPub = URL_PUB;
     private String urlSub = URL_SUB;
-    private boolean isRicohTheta = false;
 
-    // Media devices
-    private Media media;
+    public static String keyAccountId = "ACCOUNT_ID";
+    public static String keyStreamNamePub = "STREAM_NAME_PUB";
+    public static String keyStreamNameSub = "STREAM_NAME_SUB";
+    public static String keyTokenPub = "TOKEN_PUB";
+    public static String keyTokenSub = "TOKEN_SUB";
+    public static String keyUrlPub = "URL_PUB";
+    public static String keyUrlSub = "URL_SUB";
+    public static String keySourceIdPub = "SOURCE_ID_PUB";
+    public static String keySourceIdPubEnabled = "SOURCE_ID_PUB_ENABLED";
+    public static String keyRicohTheta = "RICOH_THETA";
+    public static String keyConVisible = "CON_VISIBLE";
+
+    private ArrayList<AudioSource> audioSourceList;
     private String audioSourceIndexKey = "AUDIO_SOURCE_INDEX";
     private int audioSourceIndexDefault = 0;
     private int audioSourceIndex;
-    private ArrayList<AudioSource> audioSourceList;
     private AudioSource audioSource;
-    /**
-     * The list of {@link AudioPlayback} devices available for us to play subscribed audio.
-     * The desired device must be selected and {@link AudioPlayback#initPlayback() initiated}
-     * before the {@link AudioTrack} is subscribed.
-     */
-    private ArrayList<AudioPlayback> audioPlaybackList;
-    private String audioPlaybackIndexKey = "AUDIO_PLAYBACK_INDEX";
-    private int audioPlaybackIndexDefault = 0;
-    private int audioPlaybackIndex;
-    private AudioPlayback audioPlayback;
 
     private ArrayList<VideoSource> videoSourceList;
     private String videoSourceIndexKey = "VIDEO_SOURCE_INDEX";
@@ -167,25 +155,60 @@ public class MillicastManager {
     private int capabilityIndex;
     private VideoCapabilities capability;
 
-    // Media codecs
     private ArrayList<String> audioCodecList;
     private String audioCodecIndexKey = "AUDIO_CODEC_INDEX";
     private int audioCodecIndexDefault = 0;
     private int audioCodecIndex;
     private String audioCodec;
+
     private ArrayList<String> videoCodecList;
     private String videoCodecIndexKey = "VIDEO_CODEC_INDEX";
     private int videoCodecIndexDefault = 0;
     private int videoCodecIndex;
-    private String videoCodecDefault = "VP8";
-    private String videoCodecRTV = "H264";
     private String videoCodec;
 
-    // Media objects
-    private AudioTrack pubAudioTrack;
-    private AudioTrack subAudioTrack;
-    private VideoTrack pubVideoTrack;
-    private VideoTrack subVideoTrack;
+    /**
+     * The list of {@link AudioPlayback} devices available for us to play subscribed audio.
+     * The desired device must be selected and {@link AudioPlayback#initPlayback() initiated}
+     * before the {@link AudioTrack} is subscribed.
+     */
+    private ArrayList<AudioPlayback> audioPlaybackList;
+    private String audioPlaybackIndexKey = "AUDIO_PLAYBACK_INDEX";
+    private int audioPlaybackIndexDefault = 0;
+    private int audioPlaybackIndex;
+    private AudioPlayback audioPlayback;
+
+    // SDK Media objects
+    private Media media;
+    private AudioTrack audioTrackPub;
+    private AudioTrack audioTrackSub;
+    private VideoTrack videoTrackPub;
+    private VideoTrack videoTrackSub;
+
+    // Display
+    private VideoRenderer rendererPub;
+    private VideoRenderer rendererSub;
+    private boolean mirroredPub = false;
+    private boolean mirroredSub = false;
+    private ScalingType scalingPub = SCALE_ASPECT_FIT;
+    private ScalingType scalingSub = SCALE_ASPECT_FIT;
+
+    // Publish/Subscribe
+    private Publisher publisher;
+    private Subscriber subscriber;
+    // Options objects for Publish/Subscribe
+    private Publisher.Option optionPub;
+    private Subscriber.Option optionSub;
+
+    // View objects
+    private SwitchHdl switchHdl;
+    private VideoSourceEvtHdl videoSourceEvtHdl;
+    private PubListener listenerPub;
+    private SubListener listenerSub;
+    private PublishFragment fragmentPub;
+    private SubscribeFragment fragmentSub;
+
+    // Multisource objects
     // MID (Media Id) for received audio/video tracks.
     private String midAudio;
     private String midVideo;
@@ -193,57 +216,19 @@ public class MillicastManager {
      * Map of SourceId : {@link SourceInfo} of received and currently active sources.
      */
     private HashMap<String, SourceInfo> sourceMap;
-    // SourceId to being subscribed to for Audio.
-    private String sourceIdAudio = null;
-    // SourceId to being subscribed to for Video.
-    private String sourceIdVideo = null;
-
-    // Display
-    private VideoRenderer pubRenderer;
-    private VideoRenderer subRenderer;
-    private boolean pubMirrored = false;
-    private boolean subMirrored = false;
-    private ScalingType pubScaling = SCALE_ASPECT_FIT;
-    private ScalingType subScaling = SCALE_ASPECT_FIT;
-
-    // Publish/Subscribe
-    private Publisher publisher;
-    private Subscriber subscriber;
-    private Publisher.Option optionPub;
-    private Subscriber.Option optionSub;
-
-    // View objects
-    private SwitchHdl switchHdl;
-    private VidSrcEvtHdl vidSrcEvtHdl;
-    private SubscribeFragment subscribeFragment;
-    private PubListener pubListener;
-    private SubListener subListener;
+    // SourceId being subscribed to for Audio.
+    private String sourceIdAudioSub = null;
+    // SourceId being subscribed to for Video.
+    private String sourceIdVideoSub = null;
 
     private MillicastManager() {
     }
 
-    //**********************************************************************************************
-    // APIs
-    //**********************************************************************************************
-
-    //**********************************************************************************************
-    // Millicast platform
-    //**********************************************************************************************
-
     /**
-     * Method to get and initialize MillicastManager Singleton instance.
+     * Initialize the {@link MillicastManager} instance before using it for the first time.
      *
-     * @return
+     * @param context The {@link android.content.Context ApplicationContext}.
      */
-    public static MillicastManager getSingleInstance() {
-        synchronized (MillicastManager.class) {
-            if (SINGLE_INSTANCE == null) {
-                SINGLE_INSTANCE = new MillicastManager();
-            }
-        }
-        return SINGLE_INSTANCE;
-    }
-
     public void init(Context context) {
         this.context = context;
         Client.initMillicastSdk(this.context);
@@ -254,18 +239,26 @@ public class MillicastManager {
         });
         // Prepare Media
         getMedia();
+
         // Get media indices from stored values if present, else from default values.
-        setVideoSourceIndex(
-                Utils.getSaved(videoSourceIndexKey, videoSourceIndexDefault, context), false);
-        setCapabilityIndex(Utils.getSaved(capabilityIndexKey, capabilityIndexDefault, context));
+        // Set media values using indices.
         setAudioSourceIndex(
                 Utils.getSaved(audioSourceIndexKey, audioSourceIndexDefault, context));
         setAudioPlaybackIndex(
                 Utils.getSaved(audioPlaybackIndexKey, audioPlaybackIndexDefault, context));
+        setVideoSourceIndex(
+                Utils.getSaved(videoSourceIndexKey, videoSourceIndexDefault, context), false);
+        setCapabilityIndex(Utils.getSaved(capabilityIndexKey, capabilityIndexDefault, context));
         setCodecIndex(Utils.getSaved(audioCodecIndexKey, audioCodecIndexDefault, context), true);
         setCodecIndex(Utils.getSaved(videoCodecIndexKey, videoCodecIndexDefault, context), false);
 
-        // Set credentials from stored values if present, else from file values.
+        // Create Publisher and Subscriber Options
+        optionPub = new Publisher.Option();
+        optionPub.stereo = true;
+        optionSub = new Subscriber.Option();
+        sourceMap = new HashMap<>();
+
+        // Set credentials from stored values if present, else from Constants file values.
         setAccountId(Utils.getSaved(keyAccountId, ACCOUNT_ID, context), false);
         setStreamNamePub(Utils.getSaved(keyStreamNamePub, STREAM_NAME_PUB, context), false);
         setStreamNameSub(Utils.getSaved(keyStreamNameSub, STREAM_NAME_SUB, context), false);
@@ -277,11 +270,30 @@ public class MillicastManager {
         setUrlSub(Utils.getSaved(keyUrlSub, URL_SUB, context), false);
         setRicohTheta(Utils.getSaved(keyRicohTheta, false, context), false);
 
-        sourceMap = new HashMap<>();
-        optionPub = new Publisher.Option();
-        optionSub = new Subscriber.Option();
+        logD(TAG, "[McMan][Init] OK.");
+    }
 
-        logD(TAG, "[init] OK.");
+    //**********************************************************************************************
+    // APIs
+    //**********************************************************************************************
+
+    //**********************************************************************************************
+    // Millicast platform
+    //**********************************************************************************************
+
+    /**
+     * Method to get the MillicastManager Singleton instance.
+     * Must call {@link #init(Context)} before using the instance for the first time.
+     *
+     * @return
+     */
+    public static MillicastManager getSingleInstance() {
+        synchronized (MillicastManager.class) {
+            if (SINGLE_INSTANCE == null) {
+                SINGLE_INSTANCE = new MillicastManager();
+            }
+        }
+        return SINGLE_INSTANCE;
     }
 
     public String getAccountId(Source source) {
@@ -601,65 +613,6 @@ public class MillicastManager {
     public void setSubState(SubscriberState subState) {
         this.subState = subState;
         Log.d(TAG, "setSubState: " + subState);
-    }
-
-    //**********************************************************************************************
-    // Connect
-    //**********************************************************************************************
-
-    /**
-     * Connect to Millicast for publishing.
-     * Publishing credentials required.
-     */
-    public void pubConnect() {
-        setPubState(MillicastManager.PublisherState.CONNECTING);
-        connectPublisher();
-        logD(TAG, "[Connect][Pub] Trying...");
-    }
-
-    /**
-     * Connect to Millicast for subscribing.
-     * Subscribing credentials required.
-     */
-    public void subConnect() {
-        String logTag = "[Connect][Sub] ";
-        if (getSubscriber() == null) {
-            logD(TAG, logTag + "Failed as Subscriber is not available!");
-            return;
-        }
-
-        if (subscriber.isConnected()) {
-            logD(TAG, logTag + "Not doing as we're already connected!");
-            return;
-        }
-
-        setSubState(MillicastManager.SubscriberState.CONNECTING);
-        Subscriber.Credential creds = this.subscriber.getCredentials();
-        creds.accountId = getAccountId(CURRENT);
-        creds.streamName = getStreamNameSub(CURRENT);
-        creds.apiUrl = getUrlSub(CURRENT);
-
-        audioPlaybackStart();
-
-        // [WA] ------------------------------------------------------------------------------------
-        // This a workaround for DIOS-149 where credentials are not set if a Subscribe Token
-        // is provided. This line can be removed once DIOS-149 is fixed.
-        this.subscriber.setCredentials(creds);
-        // [WA] ------------------------------------------------------------------------------------
-
-        // If a Subscribe Token is required, add it.
-        // If it is not required, do not add it.
-        String tokenSub = getTokenSub(CURRENT);
-        if (tokenSub != null && !tokenSub.isEmpty()) {
-            creds.token = Optional.of(tokenSub);
-        }
-        this.subscriber.setCredentials(creds);
-        this.subscriber.setOptions(optionSub);
-        this.subscriber.connect();
-        Log.d(TAG, "Starting media subscribe...");
-        Log.d(TAG, "Started display video.");
-
-        logD(TAG, logTag + "Trying...");
     }
 
     //**********************************************************************************************
@@ -1022,254 +975,69 @@ public class MillicastManager {
         stopCaptureAudio();
     }
 
-    public AudioTrack getPubAudioTrack() {
-        return pubAudioTrack;
+    public AudioTrack getAudioTrackPub() {
+        return audioTrackPub;
     }
 
-    public VideoTrack getPubVideoTrack() {
-        return pubVideoTrack;
+    public VideoTrack getVideoTrackPub() {
+        return videoTrackPub;
     }
 
-    public AudioTrack getSubAudioTrack() {
-        return subAudioTrack;
+    public AudioTrack getAudioTrackSub() {
+        return audioTrackSub;
     }
 
-    public void setSubAudioTrack(AudioTrack subAudioTrack) {
-        this.subAudioTrack = subAudioTrack;
+    /**
+     * Set the received videoTrack into MillicastManager.
+     */
+    public void setAudioTrackSub(AudioTrack audioTrackSub) {
+        this.audioTrackSub = audioTrackSub;
         enableNdiOutput(isNdiOutputEnabled(true), true, null);
     }
 
-    public VideoTrack getSubVideoTrack() {
-        return subVideoTrack;
+    public VideoTrack getVideoTrackSub() {
+        return videoTrackSub;
     }
 
     //**********************************************************************************************
     // Mute / unmute audio / video.
     //**********************************************************************************************
 
-    public boolean isPubAudioEnabled() {
-        return pubAudioEnabled;
+    public boolean isAudioEnabledPub() {
+        return audioEnabledPub;
     }
 
-    public void setPubAudioEnabled(boolean pubAudioEnabled) {
-        this.pubAudioEnabled = pubAudioEnabled;
+    public void setAudioEnabledPub(boolean audioEnabledPub) {
+        this.audioEnabledPub = audioEnabledPub;
     }
 
-    public boolean isPubVideoEnabled() {
-        return pubVideoEnabled;
+    public boolean isVideoEnabledPub() {
+        return videoEnabledPub;
     }
 
-    public void setPubVideoEnabled(boolean pubVideoEnabled) {
-        this.pubVideoEnabled = pubVideoEnabled;
+    public void setVideoEnabledPub(boolean videoEnabledPub) {
+        this.videoEnabledPub = videoEnabledPub;
     }
 
-    public boolean isSubAudioEnabled() {
-        return subAudioEnabled;
+    public boolean isAudioEnabledSub() {
+        return audioEnabledSub;
     }
 
-    public void setSubAudioEnabled(boolean subAudioEnabled) {
-        this.subAudioEnabled = subAudioEnabled;
+    public void setAudioEnabledSub(boolean audioEnabledSub) {
+        this.audioEnabledSub = audioEnabledSub;
     }
 
-    public boolean isSubVideoEnabled() {
-        return subVideoEnabled;
+    public boolean isVideoEnabledSub() {
+        return videoEnabledSub;
     }
 
-    public void setSubVideoEnabled(boolean subVideoEnabled) {
-        this.subVideoEnabled = subVideoEnabled;
+    public void setVideoEnabledSub(boolean videoEnabledSub) {
+        this.videoEnabledSub = videoEnabledSub;
     }
 
     //**********************************************************************************************
-    // Render
+    // Render - Audio
     //**********************************************************************************************
-
-    /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
-     * By default this renderer will be
-     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
-     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
-     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
-     * to have a natural feel when looking at the local Publisher view.
-     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
-     *
-     * @return {@link VideoRenderer}
-     */
-    public VideoRenderer getPubRenderer() {
-        // If it's not available, create it with application context.
-        if (pubRenderer == null) {
-            pubRenderer = new VideoRenderer(context);
-            pubRenderer.setScalingType(pubScaling);
-
-            logD(TAG, "[getPubRenderer] Created renderer with application context.");
-        } else {
-            logD(TAG, "[getPubRenderer] Using existing renderer.");
-        }
-        return pubRenderer;
-    }
-
-    /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
-     * By default this renderer will be
-     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
-     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
-     * The scaling effect is not transmitted to the Publisher.
-     *
-     * @return {@link VideoRenderer}
-     */
-    public VideoRenderer getSubRenderer() {
-        // If it's not available, create it with application context.
-        if (subRenderer == null) {
-            subRenderer = new VideoRenderer(context);
-            subRenderer.setScalingType(subScaling);
-            logD(TAG, "[getSubRenderer] Created renderer with application context.");
-        } else {
-            logD(TAG, "[getSubRenderer] Using existing renderer.");
-        }
-        return subRenderer;
-    }
-
-    /**
-     * Set the videoTrack in MillicastManager and render it.
-     * Will execute on UI thread.
-     *
-     * @param videoTrack
-     */
-    public void setRenderSubVideo(VideoTrack videoTrack) {
-        getMainActivity().runOnUiThread(() -> {
-            setRenderSubVideoTrack(videoTrack);
-        });
-    }
-
-    /**
-     * Set the videoTrack in MillicastManager and render it.
-     * Must be called on UI thread.
-     *
-     * @param videoTrack
-     */
-    public void setRenderSubVideoTrack(VideoTrack videoTrack) {
-        this.subVideoTrack = videoTrack;
-        if (videoTrack == null) {
-            logD(TAG, "[setRenderSubVideoTrack] videoTrack is null, so not rendering it...");
-            return;
-        }
-        enableNdiOutput(isNdiOutputEnabled(false), false, null);
-
-        setSubVideoEnabled(true);
-        logD(TAG, "[setRenderSubVideoTrack] Set videoTrack, trying to render it...");
-
-        renderSubVideo();
-    }
-
-    public boolean isPubMirrored() {
-        return pubMirrored;
-    }
-
-    /**
-     * Switch the mirroring of the specified videoRenderer from mirrored to not mirrored,
-     * and vice-versa.
-     *
-     * @param forPub If true, will be performed for the Publisher's videoRenderer,
-     *               else for the Subscriber's videoRenderer.
-     */
-    public void switchMirror(boolean forPub) {
-        String logTag = "[Mirror][Switch]";
-        VideoRenderer renderer = subRenderer;
-        boolean toMirror;
-        if (forPub) {
-            logTag += "[Pub] ";
-            renderer = pubRenderer;
-            toMirror = !pubMirrored;
-        } else {
-            logTag += "[Sub] ";
-            toMirror = !subMirrored;
-        }
-
-        logD(TAG, logTag + "Trying to set mirroring for videoRenderer to: " + toMirror + ".");
-        switchMirror(toMirror, renderer, forPub);
-    }
-
-    /**
-     * Apply again the current {@link ScalingType} of the specified videoRenderer.
-     * This could be useful when the videoView's aspect ratio has changed.
-     *
-     * @param forPub If true, will be performed for the Publisher's videoRenderer,
-     *               else for the Subscriber's videoRenderer.
-     * @return
-     */
-    public ScalingType applyScaling(boolean forPub) {
-        String logTag = "[Scale][Apply]";
-        VideoRenderer renderer = subRenderer;
-        ScalingType scaling = subScaling;
-        if (forPub) {
-            logTag += "[Pub] ";
-            renderer = pubRenderer;
-            scaling = pubScaling;
-        } else {
-            logTag += "[Sub] ";
-        }
-
-        if (renderer == null) {
-            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
-            return null;
-        }
-
-        renderer.setScalingType(scaling);
-        logD(TAG, logTag + "OK: " + scaling + ".");
-        return scaling;
-    }
-
-    /**
-     * Set the {@link ScalingType} of the specified videoRenderer to the next type.
-     * If at end of range of ScalingType, cycle to start of the other end.
-     * The types of scaling in use are:
-     * {@link ScalingType#SCALE_ASPECT_FIT} - video frame is scaled to fit the size of the view by
-     * maintaining the aspect ratio (black borders may be displayed).
-     * {@link ScalingType#SCALE_ASPECT_FILL} - video frame is scaled to fill the size of the view by
-     * maintaining the aspect ratio. Some portion of the video frame may be
-     * clipped.
-     * {@link ScalingType#SCALE_ASPECT_BALANCED} - Compromise between FIT and FILL. Video frame will fill as much as
-     * possible of the view while maintaining aspect ratio, under the constraint that at least
-     * ~0.5625 of the frame content will be shown.
-     *
-     * @param ascending If true, "next" ScalingType is defined in the direction of increasing index,
-     *                  otherwise it is in the opposite direction.
-     * @param forPub    If true, will be performed for the Publisher's videoRenderer,
-     *                  else for the Subscriber's videoRenderer.
-     * @return
-     */
-    public ScalingType switchScaling(boolean ascending, boolean forPub) {
-        String logTag = "[Scale][Switch]";
-        VideoRenderer renderer = subRenderer;
-        ScalingType scaling = subScaling;
-        if (forPub) {
-            logTag += "[Pub] ";
-            renderer = pubRenderer;
-            scaling = pubScaling;
-        } else {
-            logTag += "[Sub] ";
-        }
-
-        if (renderer == null) {
-            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
-            return null;
-        }
-
-        int now = scaling.ordinal();
-        int size = ScalingType.values().length;
-        int next = Utils.indexNext(size, now, ascending, logTag);
-        ScalingType nextScaling = ScalingType.values()[next];
-        logD(TAG, logTag + "Next for videoRenderer: " + nextScaling + ".");
-
-        renderer.setScalingType(nextScaling);
-        if (forPub) {
-            pubScaling = nextScaling;
-        } else {
-            subScaling = nextScaling;
-        }
-        logD(TAG, logTag + "OK.");
-        return nextScaling;
-    }
-
 
     public ArrayList<AudioPlayback> getAudioPlaybackList() {
         if (audioPlaybackList == null) {
@@ -1314,7 +1082,292 @@ public class MillicastManager {
     }
 
     //**********************************************************************************************
-    // Publish
+    // Render - Video
+    //**********************************************************************************************
+
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
+     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
+     * to have a natural feel when looking at the local Publisher view.
+     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
+     *
+     * @return {@link VideoRenderer}
+     */
+    public VideoRenderer getRendererPub() {
+        // If it's not available, create it with application context.
+        if (rendererPub == null) {
+            rendererPub = new VideoRenderer(context);
+            rendererPub.setScalingType(scalingPub);
+
+            logD(TAG, "[getPubRenderer] Created renderer with application context.");
+        } else {
+            logD(TAG, "[getPubRenderer] Using existing renderer.");
+        }
+        return rendererPub;
+    }
+
+    /**
+     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
+     * By default this renderer will be
+     * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
+     * The scaling effect is not transmitted to the Publisher.
+     *
+     * @return {@link VideoRenderer}
+     */
+    public VideoRenderer getRendererSub() {
+        // If it's not available, create it with application context.
+        if (rendererSub == null) {
+            rendererSub = new VideoRenderer(context);
+            rendererSub.setScalingType(scalingSub);
+            logD(TAG, "[getSubRenderer] Created renderer with application context.");
+        } else {
+            logD(TAG, "[getSubRenderer] Using existing renderer.");
+        }
+        return rendererSub;
+    }
+
+    /**
+     * Render the subscribed video.
+     * Will execute on UI thread.
+     *
+     * @param videoTrack
+     */
+    public void subRenderVideo(VideoTrack videoTrack) {
+        getMainActivity().runOnUiThread(() -> {
+            setRenderVideoTrackSub(videoTrack);
+        });
+    }
+
+    public boolean isMirroredPub() {
+        return mirroredPub;
+    }
+
+    /**
+     * Switch the mirroring of the specified videoRenderer from mirrored to not mirrored,
+     * and vice-versa.
+     *
+     * @param forPub If true, will be performed for the Publisher's videoRenderer,
+     *               else for the Subscriber's videoRenderer.
+     */
+    public void switchMirror(boolean forPub) {
+        String logTag = "[Mirror][Switch]";
+        VideoRenderer renderer = rendererSub;
+        boolean toMirror;
+        if (forPub) {
+            logTag += "[Pub] ";
+            renderer = rendererPub;
+            toMirror = !mirroredPub;
+        } else {
+            logTag += "[Sub] ";
+            toMirror = !mirroredSub;
+        }
+
+        logD(TAG, logTag + "Trying to set mirroring for videoRenderer to: " + toMirror + ".");
+        switchMirror(toMirror, renderer, forPub);
+    }
+
+    /**
+     * Apply again the current {@link ScalingType} of the specified videoRenderer.
+     * This could be useful when the videoView's aspect ratio has changed.
+     *
+     * @param forPub If true, will be performed for the Publisher's videoRenderer,
+     *               else for the Subscriber's videoRenderer.
+     * @return
+     */
+    public ScalingType applyScaling(boolean forPub) {
+        String logTag = "[Scale][Apply]";
+        VideoRenderer renderer = rendererSub;
+        ScalingType scaling = scalingSub;
+        if (forPub) {
+            logTag += "[Pub] ";
+            renderer = rendererPub;
+            scaling = scalingPub;
+        } else {
+            logTag += "[Sub] ";
+        }
+
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return null;
+        }
+
+        renderer.setScalingType(scaling);
+        logD(TAG, logTag + "OK: " + scaling + ".");
+        return scaling;
+    }
+
+    /**
+     * Set the {@link ScalingType} of the specified videoRenderer to the next type.
+     * If at end of range of ScalingType, cycle to start of the other end.
+     * The types of scaling in use are:
+     * {@link ScalingType#SCALE_ASPECT_FIT} - video frame is scaled to fit the size of the view by
+     * maintaining the aspect ratio (black borders may be displayed).
+     * {@link ScalingType#SCALE_ASPECT_FILL} - video frame is scaled to fill the size of the view by
+     * maintaining the aspect ratio. Some portion of the video frame may be
+     * clipped.
+     * {@link ScalingType#SCALE_ASPECT_BALANCED} - Compromise between FIT and FILL. Video frame will fill as much as
+     * possible of the view while maintaining aspect ratio, under the constraint that at least
+     * ~0.5625 of the frame content will be shown.
+     *
+     * @param ascending If true, "next" ScalingType is defined in the direction of increasing index,
+     *                  otherwise it is in the opposite direction.
+     * @param forPub    If true, will be performed for the Publisher's videoRenderer,
+     *                  else for the Subscriber's videoRenderer.
+     * @return
+     */
+    public ScalingType switchScaling(boolean ascending, boolean forPub) {
+        String logTag = "[Scale][Switch]";
+        VideoRenderer renderer = rendererSub;
+        ScalingType scaling = scalingSub;
+        if (forPub) {
+            logTag += "[Pub] ";
+            renderer = rendererPub;
+            scaling = scalingPub;
+        } else {
+            logTag += "[Sub] ";
+        }
+
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return null;
+        }
+
+        int now = scaling.ordinal();
+        int size = ScalingType.values().length;
+        int next = Utils.indexNext(size, now, ascending, logTag);
+        ScalingType nextScaling = ScalingType.values()[next];
+        logD(TAG, logTag + "Next for videoRenderer: " + nextScaling + ".");
+
+        renderer.setScalingType(nextScaling);
+        if (forPub) {
+            scalingPub = nextScaling;
+        } else {
+            scalingSub = nextScaling;
+        }
+        logD(TAG, logTag + "OK.");
+        return nextScaling;
+    }
+
+    //**********************************************************************************************
+    // Render - Audio / Video
+    //**********************************************************************************************
+
+    /**
+     * <p>
+     * Warning: NDI output for {@link AudioTrack} is not functional, see warning for
+     * {@link #enableNdiOutput} for more details.
+     * </p>
+     * Checks if subscribed media (audio or video as specified) has
+     * enabled (or requested if not yet capturing) NDI output.
+     *
+     * @param forAudio If true, this is for audio NDI output, otherwise for video NDI output.
+     * @return
+     */
+    public boolean isNdiOutputEnabled(boolean forAudio) {
+        String logTag = "[Sub][NDI]";
+        Track track = audioTrackSub;
+        boolean ndiEnabled = ndiOutputAudio;
+
+        if (forAudio) {
+            logTag += "[Audio][?] ";
+        } else {
+            logTag += "[Video][?] ";
+            track = videoTrackSub;
+            ndiEnabled = ndiOutputVideo;
+        }
+
+        if (track == null) {
+            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: Does not exist.");
+            return ndiEnabled;
+        } else {
+            boolean enabled = track.isNdiOutputEnabled();
+            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: " + enabled + ".");
+        }
+        return ndiEnabled;
+    }
+
+    /**
+     * <p>
+     * Warning: As of SDK 1.1.1 and until documented otherwise in the SDK,
+     * {@link AudioTrack#enableNdiOutput enabling} and {@link AudioTrack#disableNdiOutput() disabling}
+     * NDI output for {@link AudioTrack} is still not functional, i.e. will not have any impact on
+     * NDI output when called. To enable audio NDI output for subscribed stream, please use
+     * "ndi output" from the {@link #audioPlaybackList list of Audio Playback Devices}.
+     * Please see {@link #setAudioPlaybackIndex(int)} and {@link #setAudioPlayback()}.
+     * </p>
+     * Enable/disable subscribed media (audio or video as specified) to be available as NDI output.
+     * If media track is not currently available, this will set a flag to enable/disable
+     * NDI output for the media when it is available.
+     *
+     * @param enable     If true, will enable NDI output, else disable.
+     * @param forAudio   If true, this is for audio NDI output, otherwise for video NDI output.
+     * @param sourceName If NDI output enabled, this will be the NDI source name.
+     */
+    public void enableNdiOutput(boolean enable, boolean forAudio, String sourceName) {
+        String logTag = "[Sub][NDI]";
+        String log = "";
+        Track track = audioTrackSub;
+
+        if (forAudio) {
+            logTag += "[Audio] ";
+        } else {
+            logTag += "[Video] ";
+            track = videoTrackSub;
+        }
+
+        if (track == null) {
+            if (forAudio) {
+                ndiOutputAudio = enable;
+            } else {
+                ndiOutputVideo = enable;
+            }
+            logD(TAG, logTag + "Only set flag to " + enable + " Media track does not exist.");
+            return;
+        }
+
+        // Set a default source name if none was given.
+        if (sourceName == null || sourceName.isEmpty()) {
+            if (forAudio) {
+                sourceName = context.getResources().getString(R.string.ndi_name_audio);
+            } else {
+                sourceName = context.getResources().getString(R.string.ndi_name_video);
+            }
+        }
+        boolean success = false;
+        if (enable) {
+            try {
+                track.enableNdiOutput(sourceName);
+                log = "Enabled. Source name: " + sourceName + ".";
+                success = true;
+            } catch (IllegalStateException e) {
+                log = "Failed. Error: " + e.getLocalizedMessage();
+            }
+        } else {
+            try {
+                track.disableNdiOutput();
+                log = "Disabled.";
+                success = true;
+            } catch (IllegalStateException e) {
+                log = "Failed. Error: " + e.getLocalizedMessage();
+            }
+        }
+        // Set flags if successful.
+        if (success) {
+            if (forAudio) {
+                ndiOutputAudio = enable;
+            } else {
+                ndiOutputVideo = enable;
+            }
+        }
+        logD(TAG, logTag + log);
+    }
+
+    //**********************************************************************************************
+    // Publish - Codecs
     //**********************************************************************************************
 
     /**
@@ -1431,101 +1484,187 @@ public class MillicastManager {
         logD(TAG, logTag + "OK.");
     }
 
+    //**********************************************************************************************
+    // Connect
+    //**********************************************************************************************
+
     /**
-     * Sets the Publish View into the Publisher.Listener and VideoSource.EventsHandler.
-     * If either of these do not exist, they will be created.
-     *
-     * @param view
+     * Connect to Millicast for publishing.
+     * Publishing credentials required.
+     * Credentials are specified in Constants file, but can also be modified on Settings UI.
      */
-    public void setPubView(PublishFragment view) {
-        if (pubListener == null) {
-            logD(TAG, "[setPubView] PubListener does not exist...");
-            pubListener = new PubListener();
-            logD(TAG, "[setPubView] Created a new PubListener.");
+    public void connectPub() {
+        String logTag = "[Pub][Con] ";
+
+        // Create Publisher if not present
+        if (getPublisher() == null) {
+            logD(TAG, logTag + "Failed! Publisher not available.");
+            return;
         }
-        pubListener.setPublishFragment(view);
-        if (vidSrcEvtHdl == null) {
-            logD(TAG, "[setPubView] VideoSource.EventsHandler does not exist...");
-            vidSrcEvtHdl = new VidSrcEvtHdl();
-            logD(TAG, "[setPubView] Created a new VideoSource.EventsHandler.");
+
+        if (publisher.isConnected()) {
+            logD(TAG, logTag + "Not doing as we're already connected!");
+            return;
         }
-        vidSrcEvtHdl.setPublishFragment(view);
-        logD(TAG, "[setPubView] Set Publish View into the Publisher.Listener and VideoSource.EventsHandler.");
+
+        setPubState(PublisherState.CONNECTING);
+
+        // Connect Publisher.
+        logD(TAG, logTag + "Trying...");
+        boolean success = connectPubMc();
+
+        if (success) {
+            logD(TAG, logTag + "OK.");
+        } else {
+            setPubState(PublisherState.DISCONNECTED);
+            logD(TAG, logTag + "Failed! Connection requirements not fulfilled. Check inputs (e.g. credentials) and any Millicast error message.");
+        }
     }
+
+    /**
+     * Connect to Millicast for subscribing.
+     * Subscribing credentials required.
+     * Credentials are specified in Constants file, but can also be modified on Settings UI.
+     */
+    public void connectSub() {
+        String logTag = "[Sub][Con] ";
+
+        // Create Subscriber if not present
+        if (getSubscriber() == null) {
+            logD(TAG, logTag + "Failed! Subscriber is not available.");
+            return;
+        }
+
+        if (subscriber.isConnected()) {
+            logD(TAG, logTag + "Not doing as we're already connected!");
+            return;
+        }
+
+        setSubState(SubscriberState.CONNECTING);
+
+        // Connect Subscriber.
+        logD(TAG, logTag + "Trying...");
+        boolean success = connectSubMc();
+
+        if (success) {
+            logD(TAG, logTag + "OK.");
+            logD(TAG, logTag + "Initializing audio playback device...");
+            audioPlaybackStart();
+        } else {
+            setSubState(SubscriberState.DISCONNECTED);
+            logD(TAG, logTag + "Failed! Connection requirements not fulfilled. Check inputs (e.g. credentials) and any Millicast error message.");
+        }
+    }
+
+    //**********************************************************************************************
+    // Publish
+    //**********************************************************************************************
 
     /**
      * Publish audio and video tracks that are already captured.
      * Must first be connected to Millicast.
      */
-    public void startPublish() {
-        String logTag = "[Publish][Start] ";
+    public void startPub() {
+        String logTag = "[Pub][Start] ";
         if (publisher == null) {
-            logD(TAG, logTag + "Not publishing as Publisher is not available!");
+            logD(TAG, logTag + "Failed! Publisher is not available!");
             return;
         }
+
         if (!publisher.isConnected()) {
             if (pubState == PublisherState.CONNECTED) {
                 logD(TAG, logTag + "Client.isConnected FALSE!!! " +
                         "Continuing as pubState is " + pubState + ".");
             } else {
-                logD(TAG, logTag + "Not publishing as we are not connected!" +
+                logD(TAG, logTag + "Failed! Publisher not connected!" +
                         " pubState is " + pubState + ".");
                 return;
             }
         }
-        if (publisher.isPublishing()) {
+
+        if (isPublishing()) {
             logD(TAG, logTag + "Not publishing as we are already publishing!");
             return;
         }
 
         if (!isAudioVideoCaptured()) {
-            logD(TAG, logTag + "Not publishing as audio & video are both not captured!.");
+            logD(TAG, logTag + "Failed! Both audio & video are not captured.");
             return;
         }
 
-        getPublisher().addTrack(getPubVideoTrack());
-        publisher.addTrack(getPubAudioTrack());
-
-        setCodecs();
-        logD(TAG, logTag + "Set " + audioCodec + "/" + videoCodec +
-                " as preferred audio/video codec.");
-        publisher.publish();
+        // Publish to Millicast
         logD(TAG, logTag + "Trying...");
+        boolean success = startPubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Starting publish...");
+        } else {
+            logD(TAG, logTag + "Failed! Start publish requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
+        }
+
+        // Get Publisher stats every 10 seconds.
+        int sec = 10;
+        enableStatsPub(sec * 1000);
+        logD(TAG, logTag + "Stats started. Collecting every " + sec + ".");
+        logD(TAG, logTag + "OK.");
     }
 
     /**
      * Stop publishing and disconnect from Millicast.
      * Does not affect capturing.
      */
-    public void stopPublish() {
-        String logTag = "[Publish][Stop] ";
+    public void stopPub() {
+        String logTag = "[Pub][Stop] ";
         if (!isPublishing()) {
-            logD(TAG, logTag + "Failed as we are not publishing!");
+            logD(TAG, logTag + "Not doing as we're not publishing!");
             return;
         }
 
-        try {
-            publisher.unpublish();
-        } catch (Exception e) {
-            logD(TAG, logTag + "Failed! Error: " + e.getLocalizedMessage() + ".");
+        // Stop publishing
+        logD(TAG, logTag + "Trying to stop publish...");
+        boolean success = stopPubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Publish stopped.");
+            setPubState(PublisherState.CONNECTED);
+        } else {
+            logD(TAG, logTag + "Failed! Stop publishing requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
         }
-        logD(TAG, logTag + "Stopped Publishing.");
-        setPubState(MillicastManager.PublisherState.CONNECTED);
 
-        publisher.disconnect();
-        enablePubStats(0);
-        setPubState(MillicastManager.PublisherState.DISCONNECTED);
-        logD(TAG, logTag + "Disconnected from Millicast.");
+        enableStatsPub(0);
+        logD(TAG, logTag + "Stats stopped. Trying to disconnect...");
 
-        // Replace with new Publisher in case a newly captured video
-        // is to be published.
+        // Disconnect Publisher
+        success = disconnectPubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Disconnected.");
+            setPubState(PublisherState.DISCONNECTED);
+        } else {
+            logD(TAG, logTag + "Failed! Disconnect requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
+        }
+
+        // Remove Publisher.
         publisher = null;
-        Log.d(TAG, logTag + "Publisher released and recreating...");
-        getPublisher();
-        logD(TAG, logTag + "Publisher recreated.");
-        logD(TAG, logTag + "Setting new audio/videoCodec...");
-        setCodecIndex(audioCodecIndex, true);
-        setCodecIndex(videoCodecIndex, false);
+        logD(TAG, logTag + "Publisher removed.");
+        logD(TAG, logTag + "OK.");
+    }
+
+    public PublishFragment getFragmentPub() {
+        return fragmentPub;
+    }
+
+    /**
+     * Keep a reference to the Publish View in the {@link MillicastManager}.
+     *
+     * @param view
+     */
+    public void setViewPub(PublishFragment view) {
+        String logTag = "[Pub][View][set] ";
+        fragmentPub = view;
         logD(TAG, logTag + "OK.");
     }
 
@@ -1543,80 +1682,117 @@ public class MillicastManager {
     // Subscribe
     //**********************************************************************************************
 
-    public SubscribeFragment getSubFragment() {
-        return subscribeFragment;
-    }
-
     /**
-     * Sets the Subscribe View into the Subscriber.Listener.
-     * If the Listener does not exist, it will be created.
-     *
-     * @param view
-     */
-    public void setSubView(SubscribeFragment view) {
-        subscribeFragment = view;
-        String logTag = "[Sub][View][set]";
-        if (subListener == null) {
-            logD(TAG, logTag + " SubListener does not exist...");
-            subListener = new SubListener();
-            logD(TAG, logTag + " Created a new SubListener.");
-        }
-        logD(TAG, logTag + " Set Subscribe View into the Subscriber.Listener.");
-    }
-
-    /**
-     * Subscribe to specified stream on Millicast.
+     * Subscribe to stream from Millicast.
      * Must first be connected to Millicast.
      */
-    public void startSubscribe() {
+    public void startSub() {
+        String logTag = "[Sub][Start] ";
         if (subscriber == null) {
-            logD(TAG, "[startSubscribe] Not subscribing as Subscriber is not available!");
+            logD(TAG, logTag + "Failed! Subscriber is not available!");
             return;
         }
+
         if (!subscriber.isConnected()) {
             if (subState == SubscriberState.CONNECTED) {
-                logD(TAG, "[startSubscribe] Client.isConnected FALSE!!! " +
+                logD(TAG, logTag + "Client.isConnected FALSE!!! " +
                         "Continuing as subState is " + subState + ".");
             } else {
-                logD(TAG, "[startSubscribe] Not subscribing as we are not connected!" +
+                logD(TAG, logTag + "Failed! Subscriber not connected!" +
                         " subState is " + subState + ".");
                 return;
             }
         }
-        if (subscriber.isSubscribed()) {
-            logD(TAG, "[startSubscribe] Not subscribing as we are already subscribing!");
+
+        if (isSubscribing()) {
+            logD(TAG, logTag + "Not subscribing as we are already subscribing!");
             return;
         }
 
-        subscriber.subscribe();
-        logD(TAG, "[startSubscribe] Trying...");
+        // Subscribe to Millicast
+        logD(TAG, logTag + "Trying...");
+        boolean success = startSubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Starting subscribe...");
+        } else {
+            logD(TAG, logTag + "Failed! Start subscribe requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
+        }
+
+        // Get Subscriber stats every 10 seconds.
+        int sec = 10;
+        enableStatsSub(sec * 1000);
+        logD(TAG, logTag + "Stats started. Collecting every " + sec + ".");
+        logD(TAG, logTag + "OK.");
     }
 
     /**
-     * Stop subscribing and disconnect Subscriber from Millicast .
+     * Stop subscribing and disconnect from Millicast.
+     * Does not affect capturing.
      */
-    public void stopSubscribe() {
-        String logTag = "[Publish][Stop] ";
-        if (subscriber == null || !subscriber.isSubscribed()) {
-            logD(TAG, logTag + "Failed as we are not subscribing!");
+    public void stopSub() {
+        String logTag = "[Sub][Stop] ";
+        if (!isSubscribing()) {
+            logD(TAG, logTag + "Not doing as we're not subscribing!");
             return;
         }
 
         // Stop subscribing
-        stopSubscribeAudioVideo();
+        logD(TAG, logTag + "Trying to stop subscribe...");
+        boolean success = stopSubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Subscribe stopped.");
+            setSubState(SubscriberState.CONNECTED);
+        } else {
+            logD(TAG, logTag + "Failed! Stop subscribing requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
+        }
+
+        enableStatsSub(0);
+        logD(TAG, logTag + "Stats stopped. Trying to disconnect...");
 
         // Disconnect Subscriber
-        subscriber.disconnect();
-        sourceMap = null;
-        sourceIdAudio = null;
-        sourceIdVideo = null;
-        enableSubStats(0);
-        setSubState(SubscriberState.DISCONNECTED);
-        logD(TAG, logTag + "Disconnected from Millicast.");
+        success = disconnectSubMc();
+
+        if (success) {
+            logD(TAG, logTag + "Disconnected.");
+            setSubState(SubscriberState.DISCONNECTED);
+        } else {
+            logD(TAG, logTag + "Failed! Disconnect requirements not fulfilled. Check current states and any Millicast error message.");
+            return;
+        }
+
+        // Remove Subscriber.
         subscriber = null;
-        Log.d(TAG, logTag + "Subscriber released and recreating...");
-        getSubscriber();
-        logD(TAG, logTag + "Subscriber recreated.");
+        logD(TAG, logTag + "Subscriber removed.");
+
+        sourceMap = null;
+        sourceIdAudioSub = null;
+        sourceIdVideoSub = null;
+        logD(TAG, logTag + "Subscribe sourceMap and sourceIds removed.");
+
+        // Remove subscribed media
+        removeSubscribeMedia();
+        logD(TAG, logTag + "Subscribe media removed.");
+
+        logD(TAG, logTag + "OK.");
+    }
+
+    public SubscribeFragment getFragmentSub() {
+        return fragmentSub;
+    }
+
+    /**
+     * Keep a reference to the Subscribe View in the {@link MillicastManager}.
+     *
+     * @param view
+     */
+    public void setViewSub(SubscribeFragment view) {
+        String logTag = "[Sub][View][set] ";
+        fragmentSub = view;
+        logD(TAG, logTag + "OK.");
     }
 
     //**********************************************************************************************
@@ -1643,12 +1819,12 @@ public class MillicastManager {
         return list;
     }
 
-    public String getSourceIdAudio() {
-        return sourceIdAudio;
+    public String getSourceIdAudioSub() {
+        return sourceIdAudioSub;
     }
 
-    public String getSourceIdVideo() {
-        return sourceIdVideo;
+    public String getSourceIdVideoSub() {
+        return sourceIdVideoSub;
     }
 
     /**
@@ -1659,10 +1835,10 @@ public class MillicastManager {
      */
     public SourceInfo getSourceProjected(boolean isAudio) {
         String logTag = "[Source][Id]";
-        String sourceId = this.sourceIdAudio;
+        String sourceId = this.sourceIdAudioSub;
         if (!isAudio) {
             logTag += "[Video] ";
-            sourceId = this.sourceIdVideo;
+            sourceId = this.sourceIdVideoSub;
         } else {
             logTag += "[Audio] ";
         }
@@ -1747,11 +1923,11 @@ public class MillicastManager {
             log = "OK. Projected new ";
             if (isAudio) {
                 log += "Audio source.\n";
-                sourceIdAudio = sourceId;
+                sourceIdAudioSub = sourceId;
                 logD(TAG, logTag + log);
             } else {
                 log += "Video source.\n";
-                sourceIdVideo = sourceId;
+                sourceIdVideoSub = sourceId;
                 // Set view to display the Layers of the projected video source.
                 log += "Setting new Layers of the project source in the view...";
                 logD(TAG, logTag + log);
@@ -1793,7 +1969,7 @@ public class MillicastManager {
     /**
      * Remove a source from our {@link #sourceMap}.
      * If this is a currently projected source:
-     * - Clear the affected {@link #sourceIdAudio} and {@link #sourceIdVideo}.
+     * - Clear the affected {@link #sourceIdAudioSub} and {@link #sourceIdVideoSub}.
      * - Project one of the remaining source in {@link #sourceMap} (if any).
      *
      * @param sourceId
@@ -1815,8 +1991,8 @@ public class MillicastManager {
         }
 
         String newSid;
-        if (sourceId.equals(sourceIdAudio)) {
-            sourceIdAudio = null;
+        if (sourceId.equals(sourceIdAudioSub)) {
+            sourceIdAudioSub = null;
             log = "Removed current sourceIdAudio.";
             if (sourceMap.size() == 0) {
                 log += " No remaining audio source to project.";
@@ -1829,8 +2005,8 @@ public class MillicastManager {
             }
         }
 
-        if (sourceId.equals(sourceIdVideo)) {
-            sourceIdVideo = null;
+        if (sourceId.equals(sourceIdVideoSub)) {
+            sourceIdVideoSub = null;
             log = "Removed current sourceIdVideo.";
             if (sourceMap.size() == 0) {
                 log += " No remaining video source to project. Reloading layer view...";
@@ -1858,7 +2034,7 @@ public class MillicastManager {
      */
     public void loadViewSource(Boolean isAudio, boolean changed) {
         String logTag = "[View][Source][Load] ";
-        if (subscribeFragment == null) {
+        if (fragmentSub == null) {
             logD(TAG, logTag + "Failed! The SubscribeFragment does not exist.");
             return;
         }
@@ -1866,7 +2042,7 @@ public class MillicastManager {
         ArrayList<String> spinnerList = getSourceList();
         Utils.GetSelectedIndex lambdaAudio = new Utils.GetSelectedIndex() {
             public int getSelectedIndex(ArrayList list) {
-                String selection = MillicastManager.this.getSourceIdAudio();
+                String selection = MillicastManager.this.getSourceIdAudioSub();
                 if (list == null || selection == null) {
                     return -1;
                 }
@@ -1875,7 +2051,7 @@ public class MillicastManager {
         };
         Utils.GetSelectedIndex lambdaVideo = new Utils.GetSelectedIndex() {
             public int getSelectedIndex(ArrayList list) {
-                String selection = MillicastManager.this.getSourceIdVideo();
+                String selection = MillicastManager.this.getSourceIdVideoSub();
                 if (list == null || selection == null) {
                     return -1;
                 }
@@ -1884,18 +2060,18 @@ public class MillicastManager {
         };
 
         getMainActivity().runOnUiThread(() -> {
-            if (subscribeFragment == null) {
+            if (fragmentSub == null) {
                 return;
             }
             if (isAudio == null) {
-                subscribeFragment.loadSourceSpinner(spinnerList, lambdaAudio, true, changed);
-                subscribeFragment.loadSourceSpinner(spinnerList, lambdaVideo, false, changed);
+                fragmentSub.loadSourceSpinner(spinnerList, lambdaAudio, true, changed);
+                fragmentSub.loadSourceSpinner(spinnerList, lambdaVideo, false, changed);
                 return;
             }
             if (isAudio) {
-                subscribeFragment.loadSourceSpinner(spinnerList, lambdaAudio, isAudio, changed);
+                fragmentSub.loadSourceSpinner(spinnerList, lambdaAudio, isAudio, changed);
             } else {
-                subscribeFragment.loadSourceSpinner(spinnerList, lambdaVideo, isAudio, changed);
+                fragmentSub.loadSourceSpinner(spinnerList, lambdaVideo, isAudio, changed);
 
             }
         });
@@ -2047,7 +2223,7 @@ public class MillicastManager {
      */
     public void loadViewLayer() {
         String logTag = "[View][Layer][Load] ";
-        if (subscribeFragment == null) {
+        if (fragmentSub == null) {
             logD(TAG, logTag + "Failed! The SubscribeFragment does not exist.");
             return;
         }
@@ -2062,8 +2238,8 @@ public class MillicastManager {
             }
         };
         getMainActivity().runOnUiThread(() -> {
-            if (subscribeFragment != null) {
-                subscribeFragment.loadLayerSpinner(layerList, lambda);
+            if (fragmentSub != null) {
+                fragmentSub.loadLayerSpinner(layerList, lambda);
             }
         });
         logD(TAG, logTag + "OK.");
@@ -2160,10 +2336,10 @@ public class MillicastManager {
         String name = "";
         String logTag = "[Scale][Name]";
 
-        ScalingType scaling = subScaling;
+        ScalingType scaling = scalingSub;
         if (forPub) {
             logTag += "[Pub] ";
-            scaling = pubScaling;
+            scaling = scalingPub;
         } else {
             logTag += "[Sub] ";
         }
@@ -2208,12 +2384,12 @@ public class MillicastManager {
 
     /**
      * Enable or disable Publisher's WebRTC stats.
-     * Do NOT call before Publisher is connected to Millicast.
+     * Stats are only collected after Publisher is connected to Millicast.
      *
      * @param enable The interval in ms between stats reports.
      *               Set to 0 to disable stats.
      */
-    public void enablePubStats(int enable) {
+    public void enableStatsPub(int enable) {
         if (publisher != null) {
             String logTag = "[Pub][Stats][Enable] ";
             if (enable > 0) {
@@ -2228,12 +2404,12 @@ public class MillicastManager {
 
     /**
      * Enable or disable Subscriber's WebRTC stats.
-     * Do NOT call before Subscriber is connected to Millicast.
+     * Stats are only collected after Subscriber is connected to Millicast.
      *
      * @param enable The interval in ms between stats reports.
      *               Set to 0 to disable stats.
      */
-    public void enableSubStats(int enable) {
+    public void enableStatsSub(int enable) {
         if (subscriber != null) {
             String logTag = "[Sub][Stats][Enable] ";
             if (enable > 0) {
@@ -2244,116 +2420,6 @@ public class MillicastManager {
                 logD(TAG, logTag + "NO.");
             }
         }
-    }
-
-    /**
-     * <p>
-     * Warning: NDI output for {@link AudioTrack} is not functional, see warning for
-     * {@link #enableNdiOutput} for more details.
-     * </p>
-     * Checks if subscribed media (audio or video as specified) has
-     * enabled (or requested if not yet capturing) NDI output.
-     *
-     * @param forAudio If true, this is for audio NDI output, otherwise for video NDI output.
-     * @return
-     */
-    public boolean isNdiOutputEnabled(boolean forAudio) {
-        String logTag = "[NDI][Output]";
-        Track track = subAudioTrack;
-        boolean ndiEnabled = ndiOutputAudio;
-
-        if (forAudio) {
-            logTag += "[Audio][?] ";
-        } else {
-            logTag += "[Video][?] ";
-            track = subVideoTrack;
-            ndiEnabled = ndiOutputVideo;
-        }
-
-        if (track == null) {
-            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: Does not exist.");
-            return ndiEnabled;
-        } else {
-            boolean enabled = track.isNdiOutputEnabled();
-            logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: " + enabled + ".");
-        }
-        return ndiEnabled;
-    }
-
-    /**
-     * <p>
-     * Warning: As of SDK 1.1.1 and until documented otherwise in the SDK,
-     * {@link AudioTrack#enableNdiOutput enabling} and {@link AudioTrack#disableNdiOutput() disabling}
-     * NDI output for {@link AudioTrack} is still not functional, i.e. will not have any impact on
-     * NDI output when called. To enable audio NDI output for subscribed stream, please use
-     * "ndi output" from the {@link #audioPlaybackList list of Audio Playback Devices}.
-     * Please see {@link #setAudioPlaybackIndex(int)} and {@link #setAudioPlayback()}.
-     * </p>
-     * Enable/disable subscribed media (audio or video as specified) to be available as NDI output.
-     * If media track is not currently available, this will set a flag to enable/disable
-     * NDI output for the media when it is available.
-     *
-     * @param enable     If true, will enable NDI output, else disable.
-     * @param forAudio   If true, this is for audio NDI output, otherwise for video NDI output.
-     * @param sourceName If NDI output enabled, this will be the NDI source name.
-     */
-    public void enableNdiOutput(boolean enable, boolean forAudio, String sourceName) {
-        String logTag = "[NDI][Output]";
-        String log = "";
-        Track track = subAudioTrack;
-
-        if (forAudio) {
-            logTag += "[Audio] ";
-        } else {
-            logTag += "[Video] ";
-            track = subVideoTrack;
-        }
-
-        if (track == null) {
-            if (forAudio) {
-                ndiOutputAudio = enable;
-            } else {
-                ndiOutputVideo = enable;
-            }
-            logD(TAG, logTag + "Only set flag to " + enable + " Media track does not exist.");
-            return;
-        }
-
-        // Set a default source name if none was given.
-        if (sourceName == null || sourceName.isEmpty()) {
-            if (forAudio) {
-                sourceName = context.getResources().getString(R.string.ndi_name_audio);
-            } else {
-                sourceName = context.getResources().getString(R.string.ndi_name_video);
-            }
-        }
-        boolean success = false;
-        if (enable) {
-            try {
-                track.enableNdiOutput(sourceName);
-                log = "Enabled. Source name: " + sourceName + ".";
-                success = true;
-            } catch (IllegalStateException e) {
-                log = "Failed. Error: " + e.getLocalizedMessage();
-            }
-        } else {
-            try {
-                track.disableNdiOutput();
-                log = "Disabled.";
-                success = true;
-            } catch (IllegalStateException e) {
-                log = "Failed. Error: " + e.getLocalizedMessage();
-            }
-        }
-        // Set flags if successful.
-        if (success) {
-            if (forAudio) {
-                ndiOutputAudio = enable;
-            } else {
-                ndiOutputVideo = enable;
-            }
-        }
-        logD(TAG, logTag + log);
     }
 
     /**
@@ -2444,56 +2510,52 @@ public class MillicastManager {
     }
 
     public void releaseViews() {
-        String logTag = TAG + "[releaseViews]";
-        if (vidSrcEvtHdl != null) {
-            vidSrcEvtHdl.setPublishFragment(null);
-        }
-        Log.d(logTag, "VideoSource EventHandler removed.");
-        if (pubListener != null) {
-            pubListener.setPublishFragment(null);
-        }
-        Log.d(logTag, "Publisher Listener removed.");
-        if (subListener != null) {
-            subscribeFragment = null;
-        }
-        Log.d(logTag, "Subscriber Listener removed.");
+        String logTag = "[Release][Views] ";
+        videoSourceEvtHdl = null;
+        logD(TAG, logTag + "VideoSource EventHandler removed.");
+        fragmentPub = null;
+        logD(TAG, logTag + "Publisher view removed.");
+        fragmentSub = null;
+        logD(TAG, logTag + "Subscriber view removed.");
     }
 
     public void release() {
-        String logTag = TAG + "[release]";
+        String logTag = TAG + "[Release]";
         media = null;
         Log.d(logTag, "Media removed.");
 
         if (publisher != null) {
+            listenerPub = null;
             publisher.release();
             publisher = null;
             Log.d(logTag, "Publisher released.");
-            pubVideoTrack = null;
-            pubAudioTrack = null;
-            pubAudioEnabled = false;
-            pubVideoEnabled = false;
+            videoTrackPub = null;
+            audioTrackPub = null;
+            audioEnabledPub = false;
+            videoEnabledPub = false;
             Log.d(logTag, "Publisher Video and Audio tracks released.");
         }
         if (subscriber != null) {
+            listenerSub = null;
             subscriber.release();
             subscriber = null;
             Log.d(logTag, "Subscriber released.");
-            subVideoTrack = null;
-            subAudioTrack = null;
-            subAudioEnabled = false;
-            subVideoEnabled = false;
+            videoTrackSub = null;
+            audioTrackSub = null;
+            audioEnabledSub = false;
+            videoEnabledSub = false;
             sourceMap = null;
             Log.d(logTag, "Subscriber Video and Audio tracks released.");
         }
 
-        if (pubRenderer != null) {
-            pubRenderer.release();
-            pubRenderer = null;
+        if (rendererPub != null) {
+            rendererPub.release();
+            rendererPub = null;
         }
         Log.d(logTag, "Publisher renderer removed.");
-        if (subRenderer != null) {
-            subRenderer.release();
-            subRenderer = null;
+        if (rendererSub != null) {
+            rendererSub.release();
+            rendererSub = null;
         }
         Log.d(logTag, "Subscriber renderer removed.");
 
@@ -2520,50 +2582,7 @@ public class MillicastManager {
     //**********************************************************************************************
 
     //**********************************************************************************************
-    // Connect
-    //**********************************************************************************************
-
-    /**
-     * Connect to Millicast for publishing. Publishing credentials required.
-     */
-    private void connectPublisher() {
-        if (getPublisher() == null) {
-            logD(TAG, "[connectPublisher] Failed as Publisher is not available!");
-            return;
-        }
-
-        if (publisher.isConnected()) {
-            logD(TAG, "[connectPublisher] Not doing as we're already connected!");
-            return;
-        }
-
-        Publisher.Credential creds = publisher.getCredentials();
-        creds.apiUrl = getUrlPub(CURRENT);
-        creds.streamName = getStreamNamePub(CURRENT);
-        creds.token = getTokenPub(CURRENT);
-
-        publisher.setCredentials(creds);
-        optionPub.sourceId = getOptSourceIdPub(CURRENT);
-        publisher.setOptions(optionPub);
-
-        boolean success;
-        String error = "Failed to connect to Millicast!";
-        try {
-            success = publisher.connect();
-        } catch (IllegalStateException e) {
-            success = false;
-            error += " " + e.getLocalizedMessage();
-        }
-        if (success) {
-            logD(TAG, "[connectPublisher] Connecting to Millicast...");
-        } else {
-            setPubState(MillicastManager.PublisherState.DISCONNECTED);
-            logD(TAG, error);
-        }
-    }
-
-    //**********************************************************************************************
-    // Select/Switch videoSource, capability.
+    // Query/Select videoSource, capability.
     //**********************************************************************************************
 
     private Media getMedia() {
@@ -2738,6 +2757,22 @@ public class MillicastManager {
     }
 
     /**
+     * Get the video source event handler .
+     * If none exist, create and return a new one.
+     */
+    private VideoSourceEvtHdl getVideoSourceEvtHdl() {
+        String logTag = "[Video][Source][Evt][Hdl] ";
+        if (videoSourceEvtHdl == null) {
+            logD(TAG, logTag + "videoSourceEvtHdl does not exist...");
+            videoSourceEvtHdl = new VideoSourceEvtHdl();
+            logD(TAG, logTag + "Created a new videoSourceEvtHdl.");
+        } else {
+            logD(TAG, logTag + "Returning existing one.");
+        }
+        return videoSourceEvtHdl;
+    }
+
+    /**
      * Set list of Capabilities supported by the active videoSource.
      * The active videoSource is selected as the first non-null value (or null if none is available)
      * in the following list:
@@ -2837,44 +2872,9 @@ public class MillicastManager {
         logD(TAG, log);
     }
 
-    /**
-     * Gets the index of the next available non-NDI camera.
-     * If at end of camera range, cycle to start of the other end.
-     * Returns null if none available.
-     *
-     * @param ascending       If true, cycle in the direction of increasing index,
-     *                        otherwise cycle in opposite direction.
-     * @param curIndex        The current videoSourceIndex.
-     * @param videoSourceList
-     * @return
-     */
-    private Integer videoSourceIndexNextNonNdi(boolean ascending, int curIndex, ArrayList<VideoSource> videoSourceList) {
-        String logTag = "[Source][Index][Next][Video][Non][Ndi] ";
-        if (videoSourceList == null) {
-            logD(TAG, logTag + "Failed! VideoSources not created!");
-            return null;
-        }
-
-        int size = videoSourceList.size();
-
-        if (size < 1) {
-            logD(TAG, logTag + "Failed! Device does not have a camera!");
-            return null;
-        }
-        int now = curIndex;
-        int next = videoSourceIndexNext(ascending, now, size);
-        // Keep searching for the next non-NDI until
-        while (videoSourceList.get(next).getType() == NDI) {
-            if (next == now) {
-                logD(TAG, logTag + "Failed! 1 complete cycle done.");
-                return null;
-            }
-            now = next;
-            next = videoSourceIndexNext(ascending, now, size);
-        }
-        logD(TAG, logTag + next + " Failed! 1 complete cycle done.");
-        return next;
-    }
+//**********************************************************************************************
+    // Switch Media
+    //**********************************************************************************************
 
     /**
      * Gets the index of the next available audioSource.
@@ -2919,6 +2919,45 @@ public class MillicastManager {
     }
 
     /**
+     * Gets the index of the next available non-NDI camera.
+     * If at end of camera range, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param ascending       If true, cycle in the direction of increasing index,
+     *                        otherwise cycle in opposite direction.
+     * @param curIndex        The current videoSourceIndex.
+     * @param videoSourceList
+     * @return
+     */
+    private Integer videoSourceIndexNextNonNdi(boolean ascending, int curIndex, ArrayList<VideoSource> videoSourceList) {
+        String logTag = "[Source][Index][Next][Video][Non][Ndi] ";
+        if (videoSourceList == null) {
+            logD(TAG, logTag + "Failed! VideoSources not created!");
+            return null;
+        }
+
+        int size = videoSourceList.size();
+
+        if (size < 1) {
+            logD(TAG, logTag + "Failed! Device does not have a camera!");
+            return null;
+        }
+        int now = curIndex;
+        int next = videoSourceIndexNext(ascending, now, size);
+        // Keep searching for the next non-NDI until
+        while (videoSourceList.get(next).getType() == NDI) {
+            if (next == now) {
+                logD(TAG, logTag + "Failed! 1 complete cycle done.");
+                return null;
+            }
+            now = next;
+            next = videoSourceIndexNext(ascending, now, size);
+        }
+        logD(TAG, logTag + next + " Failed! 1 complete cycle done.");
+        return next;
+    }
+
+    /**
      * Gets the index of the next available capability.
      * If at end of capability range, cycle to start of the other end.
      * Returns null if none available.
@@ -2940,39 +2979,6 @@ public class MillicastManager {
         }
 
         int now = capabilityIndex;
-        return Utils.indexNext(size, now, ascending, logTag);
-    }
-
-    /**
-     * Gets the index of the next available codec.
-     * If at end of codec range, cycle to start of the other end.
-     * Returns null if none available.
-     *
-     * @param ascending If true, cycle in the direction of increasing index,
-     *                  otherwise cycle in opposite direction.
-     * @param forAudio  If true, this is for audio codecs, otherwise for video codecs.
-     * @return
-     */
-    private Integer codecIndexNext(boolean ascending, boolean forAudio) {
-        String logTag = "[Codec][Index][Next] ";
-        int now;
-
-        if (forAudio) {
-            logTag = "[Audio]" + logTag;
-            now = audioCodecIndex;
-        } else {
-            logTag = "[Video]" + logTag;
-            now = videoCodecIndex;
-        }
-
-        int size;
-        ArrayList<String> codecList = getCodecList(forAudio);
-        size = codecList.size();
-        if (codecList == null || size < 1) {
-            logD(TAG, logTag + "Failed as there is no codec!");
-            return null;
-        }
-
         return Utils.indexNext(size, now, ascending, logTag);
     }
 
@@ -3026,8 +3032,8 @@ public class MillicastManager {
             logD(TAG, logTag + "Failed as unable to get valid audioSource!");
             return;
         }
-        pubAudioTrack = (AudioTrack) audioSource.startCapture();
-        setPubAudioEnabled(true);
+        audioTrackPub = (AudioTrack) audioSource.startCapture();
+        setAudioEnabledPub(true);
         logD(TAG, logTag + "OK");
     }
 
@@ -3043,8 +3049,8 @@ public class MillicastManager {
 
         removeAudioSource();
         logD(TAG, logTag + "Audio captured stopped.");
-        setPubAudioEnabled(false);
-        pubAudioTrack = null;
+        setAudioEnabledPub(false);
+        audioTrackPub = null;
     }
 
     /**
@@ -3084,7 +3090,7 @@ public class MillicastManager {
             }
         }
 
-        setCapState(MillicastManager.CaptureState.TRY_CAPTURE);
+        setCapState(CaptureState.TRY_CAPTURE);
 
         if (videoSource == null) {
             setCapState(CaptureState.NOT_CAPTURED);
@@ -3101,16 +3107,16 @@ public class MillicastManager {
         logD(TAG, logTag + "Set " + getVideoSourceStr(videoSource, false) +
                 " with Cap: " + getCapabilityStr(capability) + ".");
 
-        videoSource.setEventsHandler(vidSrcEvtHdl);
+        videoSource.setEventsHandler(getVideoSourceEvtHdl());
         VideoTrack videoTrack = (VideoTrack) videoSource.startCapture();
 
         if (videoSource.getType() == NDI) {
-            this.setCapState(MillicastManager.CaptureState.IS_CAPTURED);
+            this.setCapState(CaptureState.IS_CAPTURED);
         } else {
             mirrorFrontCamera();
         }
 
-        setRenderPubVideoTrack(videoTrack);
+        setRenderVideoTrackPub(videoTrack);
     }
 
     /**
@@ -3125,15 +3131,15 @@ public class MillicastManager {
 
         removeVideoSource();
         logD(TAG, logTag + "Video captured stopped.");
-        if (pubRenderer != null) {
-            pubRenderer.release();
-            pubRenderer = null;
+        if (rendererPub != null) {
+            rendererPub.release();
+            rendererPub = null;
         }
-        setPubMirrored(false);
+        setMirroredPub(false);
         Log.d(TAG, logTag + "Publisher renderer removed.");
-        setPubVideoEnabled(false);
-        pubVideoTrack = null;
-        setCapState(MillicastManager.CaptureState.NOT_CAPTURED);
+        setVideoEnabledPub(false);
+        videoTrackPub = null;
+        setCapState(CaptureState.NOT_CAPTURED);
     }
 
     /**
@@ -3163,11 +3169,12 @@ public class MillicastManager {
      * Check if either audio or video is captured.
      */
     private boolean isAudioVideoCaptured() {
+        String logTag = "[Capture][Audio][Video][?] ";
         if (!isAudioCaptured() && !isVideoCaptured()) {
-            logD(TAG, "[isAudioVideoCaptured] No!");
+            logD(TAG, logTag + "No!");
             return false;
         }
-        logD(TAG, "[isAudioVideoCaptured] Yes.");
+        logD(TAG, logTag + "Yes.");
         return true;
     }
 
@@ -3175,11 +3182,12 @@ public class MillicastManager {
      * Check if audio is captured.
      */
     private boolean isAudioCaptured() {
+        String logTag = "[Capture][Audio][?] ";
         if (audioSource == null || !audioSource.isCapturing()) {
-            logD(TAG, "[isAudioCaptured] No!");
+            logD(TAG, logTag + "No!");
             return false;
         }
-        logD(TAG, "[isAudioCaptured] Yes.");
+        logD(TAG, logTag + "Yes.");
         return true;
     }
 
@@ -3219,288 +3227,8 @@ public class MillicastManager {
     //**********************************************************************************************
 
     //**********************************************************************************************
-    // Render
+    // Render - Audio
     //**********************************************************************************************
-
-    private void setRenderPubVideoTrack(VideoTrack pubVideoTrack) {
-        this.pubVideoTrack = pubVideoTrack;
-        if (pubVideoTrack == null) {
-            logD(TAG, "[setRenderPubVideoTrack] videoTrack is null, so not rendering it...");
-            return;
-        }
-
-        setPubVideoEnabled(true);
-        logD(TAG, "[setRenderPubVideoTrack] Set videoTrack, trying to render it...");
-        renderPubVideo();
-    }
-
-    private void renderPubVideo() {
-        if (pubVideoTrack == null) {
-            logD(TAG, "[renderPubVideo] Unable to render as videoTrack does not exist.");
-            return;
-        }
-        // Set our pub renderer in our pub video track.
-        pubRenderer = getPubRenderer();
-        pubVideoTrack.setRenderer(pubRenderer);
-        logD(TAG, "[renderPubVideo] Set renderer in video track.");
-    }
-
-    private void renderSubVideo() {
-        if (subVideoTrack == null) {
-            logD(TAG, "[renderSubVideo] Unable to render as videoTrack does not exist.");
-            return;
-        }
-        // Set our sub renderer in our sub video track.
-        subRenderer = getSubRenderer();
-        subVideoTrack.setRenderer(subRenderer);
-        logD(TAG, "[renderSubVideo] Set renderer in video track.");
-    }
-
-    /**
-     * Switch the mirroring of the specified videoRenderer to the specified value.
-     *
-     * @param toMirror If true, renderer will be mirrored, else not.
-     * @param renderer The videoRenderer to be mirrored
-     * @param forPub   If true, will be performed for the Publisher's videoRenderer,
-     *                 else for the Subscriber's videoRenderer.
-     */
-    private void switchMirror(boolean toMirror, VideoRenderer renderer, boolean forPub) {
-        String logTag = "[Mirror][Switch]";
-
-        if (forPub) {
-            logTag += "[Pub] ";
-            pubMirrored = toMirror;
-        } else {
-            logTag += "[Sub] ";
-            subMirrored = toMirror;
-        }
-
-        if (renderer == null) {
-            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
-            return;
-        }
-        renderer.setMirror(toMirror);
-
-        logD(TAG, logTag + "Set mirroring for videoRenderer to: " + toMirror + ".");
-    }
-
-    private void setPubMirrored(boolean isMirroredPub) {
-        pubMirrored = isMirroredPub;
-    }
-
-    /**
-     * If the active videoSource is a front facing camera, it will be mirrored.
-     * If not, it will be set to not mirrored.
-     */
-    private void mirrorFrontCamera() {
-        if (videoSource.getType() == NDI) {
-            switchMirror(false, getPubRenderer(), true);
-            return;
-        }
-        CameraEnumerator cameraEnumerator;
-        String name = getVideoSource(true).getName();
-        if (Media.isCamera2Supported(context)) {
-            cameraEnumerator = new Camera2Enumerator(context);
-        } else {
-            cameraEnumerator = new Camera1Enumerator();
-        }
-        if (cameraEnumerator.isFrontFacing(name)) {
-            switchMirror(true, getPubRenderer(), true);
-        } else {
-            switchMirror(false, getPubRenderer(), true);
-        }
-    }
-
-    //**********************************************************************************************
-    // Publish
-    //**********************************************************************************************
-
-    /**
-     * Get the Publisher.
-     * If none exist, create one if a Publish View had been set.
-     *
-     * @return
-     */
-    private Publisher getPublisher() {
-        if (publisher != null) {
-            logD(TAG, "[getPublisher] Returning existing Publisher.");
-            return publisher;
-        }
-
-        logD(TAG, "[getPublisher] Trying to create one...");
-        if (pubListener == null) {
-            logD(TAG, "[getPublisher] Failed to create Publisher as Listener is not available!");
-            return null;
-        }
-        publisher = Publisher.createPublisher(pubListener);
-
-        logD(TAG, "[getPublisher] Created and returning a new Publisher.");
-        return publisher;
-    }
-
-    /**
-     * Check if we are currently publishing.
-     */
-    private boolean isPublishing() {
-        String logTag = "[Publish][Is] ";
-        if (publisher == null || !publisher.isPublishing()) {
-            logD(TAG, logTag + "No!");
-            return false;
-        }
-        logD(TAG, logTag + "Yes.");
-        return true;
-    }
-
-    /**
-     * Set the current audio/videoCodec at the audio/videoCodecIndex of the current
-     * audio/videoCodecList,
-     * and in the publisher as preferred codecs if available and not currently publishing.
-     * The current videoCodec will NOT be set if the Publisher is publishing.
-     */
-    private void setCodecs() {
-        String logTag = "[Codec][Set] ";
-        final String none = "None";
-        String ac = none;
-        String vc = none;
-
-        getCodecList(true);
-        getCodecList(false);
-
-        logD(TAG, logTag + "Selecting a new one based on selected index.");
-
-        if (audioCodecList == null || audioCodecList.size() < 1) {
-            logD(TAG, logTag + "Failed to set audio codec as none was available!");
-        } else {
-            int size = audioCodecList.size();
-
-            // If the selected index is larger than size, set it to maximum size.
-            if (audioCodecIndex >= size) {
-                logD(TAG, logTag + "Resetting audioCodecIndex to " + (size - 1) + "as it is greater than " +
-                        "size of list (" + size + ")!");
-                setCodecIndex(size - 1, true);
-            }
-            if (audioCodecIndex < 0) {
-                logD(TAG, logTag + "Resetting audioCodecIndex to 0 as it was negative!");
-                setCodecIndex(0, true);
-                return;
-            }
-            ac = audioCodecList.get(audioCodecIndex);
-        }
-
-        if (videoCodecList == null || videoCodecList.size() < 1) {
-            logD(TAG, logTag + "Failed to set video codec as none was available!");
-        } else {
-            int size = videoCodecList.size();
-
-            // If the selected index is larger than size, set it to maximum size.
-            if (videoCodecIndex >= size) {
-                logD(TAG, logTag + "Resetting videoCodecIndex to " + (size - 1) + "as it is greater than " +
-                        "size of list (" + size + ")!");
-                setCodecIndex(size - 1, false);
-            }
-            if (videoCodecIndex < 0) {
-                logD(TAG, logTag + "Resetting videoCodecIndex to 0 as it was negative!");
-                setCodecIndex(0, false);
-                return;
-            }
-            vc = videoCodecList.get(videoCodecIndex);
-        }
-
-
-        logD(TAG, logTag + "Selected at index:" + audioCodecIndex + "/" + videoCodecIndex +
-                " is: " + ac + "/" + vc + ".");
-
-        String log = logTag + "OK. ";
-        if (publisher != null) {
-            if (!publisher.isPublishing()) {
-                if (!none.equals(ac)) {
-                    audioCodec = ac;
-                    optionPub.audioCodec = Optional.of(ac);
-                    log += "Set Audio:" + audioCodec + " on Publisher. ";
-                } else {
-                    log += "Audio NOT set on Publisher.";
-                }
-                if (!none.equals(vc)) {
-                    videoCodec = vc;
-                    optionPub.videoCodec = Optional.of(vc);
-                    log += "Set Video:" + videoCodec + " on Publisher.";
-                } else {
-                    log += "Video NOT set on Publisher.";
-                }
-
-            } else {
-                log += "NOT set, as publishing is ongoing: ";
-            }
-        } else {
-            log += "NOT set, as publisher does not exists: ";
-            audioCodec = ac;
-            videoCodec = vc;
-        }
-        logD(TAG, log);
-    }
-
-    //**********************************************************************************************
-    // Subscribe
-    //**********************************************************************************************
-
-    /**
-     * Get the Subscriber.
-     * If none exist, create one if a Subscribe View had been set.
-     *
-     * @return
-     */
-    public Subscriber getSubscriber() {
-        if (subscriber != null) {
-            logD(TAG, "[getSubscriber] Returning existing Subscriber.");
-            return subscriber;
-        }
-
-        logD(TAG, "[getSubscriber] Trying to create one...");
-        if (subListener == null) {
-            logD(TAG, "[getSubscriber] Failed to create Subscriber as Listener is not available!");
-            return null;
-        }
-        subscriber = Subscriber.createSubscriber(subListener);
-        logD(TAG, "[getSubscriber] Created and returning a new Subscriber.");
-        return subscriber;
-    }
-
-    /**
-     * Check if we are currently subscribing.
-     */
-    private boolean isSubscribing() {
-        String logTag = "[Subscribe][Is] ";
-        if (subscriber == null || !subscriber.isSubscribed()) {
-            logD(TAG, logTag + "No!");
-            return false;
-        }
-        logD(TAG, logTag + "Yes.");
-        return true;
-    }
-
-    /**
-     * Set subscribe audio and video states to not subscribing.
-     */
-    private void stopSubscribeAudioVideo() {
-        subscriber.unsubscribe();
-        logD(TAG, "[stopSubscribeAudioVideo] Stopped Subscribing.");
-
-        if (subRenderer != null) {
-            subRenderer.release();
-            subRenderer = null;
-        }
-        Log.d(TAG, "Subscriber renderer removed.");
-
-        // Disable NDI outputs, if any.
-        enableNdiOutput(false, true, null);
-        setSubAudioEnabled(false);
-        subAudioTrack = null;
-
-        enableNdiOutput(false, false, null);
-        setSubVideoEnabled(false);
-        subVideoTrack = null;
-        setSubState(SubscriberState.CONNECTED);
-    }
 
     /**
      * Sets the {@link #audioPlayback} at the {@link #audioPlaybackIndex}
@@ -3573,22 +3301,643 @@ public class MillicastManager {
     }
 
     //**********************************************************************************************
-    // Utilities
+    // Render - Video
+    //**********************************************************************************************
+
+    private void setRenderVideoTrackPub(VideoTrack pubVideoTrack) {
+        this.videoTrackPub = pubVideoTrack;
+        if (pubVideoTrack == null) {
+            logD(TAG, "[setRenderPubVideoTrack] videoTrack is null, so not rendering it...");
+            return;
+        }
+
+        setVideoEnabledPub(true);
+        logD(TAG, "[setRenderPubVideoTrack] Set videoTrack, trying to render it...");
+        renderVideoPub();
+    }
+
+    private void renderVideoPub() {
+        if (videoTrackPub == null) {
+            logD(TAG, "[renderPubVideo] Unable to render as videoTrack does not exist.");
+            return;
+        }
+        // Set our pub renderer in our pub video track.
+        rendererPub = getRendererPub();
+        videoTrackPub.setRenderer(rendererPub);
+        logD(TAG, "[renderPubVideo] Set renderer in video track.");
+    }
+
+    /**
+     * Set the videoTrack in MillicastManager and render it.
+     * Must be called on UI thread.
+     *
+     * @param videoTrack
+     */
+    private void setRenderVideoTrackSub(VideoTrack videoTrack) {
+        this.videoTrackSub = videoTrack;
+        if (videoTrack == null) {
+            logD(TAG, "[setRenderSubVideoTrack] videoTrack is null, so not rendering it...");
+            return;
+        }
+        enableNdiOutput(isNdiOutputEnabled(false), false, null);
+
+        setVideoEnabledSub(true);
+        logD(TAG, "[setRenderSubVideoTrack] Set videoTrack, trying to render it...");
+
+        renderVideoSub();
+    }
+
+    private void renderVideoSub() {
+        if (videoTrackSub == null) {
+            logD(TAG, "[renderSubVideo] Unable to render as videoTrack does not exist.");
+            return;
+        }
+        // Set our sub renderer in our sub video track.
+        rendererSub = getRendererSub();
+        videoTrackSub.setRenderer(rendererSub);
+        logD(TAG, "[renderSubVideo] Set renderer in video track.");
+    }
+
+    /**
+     * Stop rendering, release and remove subscribe audio and video objects and reset their states to default values.
+     */
+    private void removeSubscribeMedia() {
+        String logTag = "[Sub][Audio][Video][X] ";
+
+        // Remove audio.
+        // Disable NDI outputs, if any.
+        enableNdiOutput(false, true, null);
+        setAudioEnabledSub(false);
+        audioTrackSub = null;
+        logD(TAG, logTag + "Audio removed.");
+
+        // Remove video
+        // Disable NDI outputs, if any.
+        enableNdiOutput(false, false, null);
+        setVideoEnabledSub(false);
+        if (rendererSub != null) {
+            rendererSub.release();
+            rendererSub = null;
+            logD(TAG, logTag + "Renderer removed.");
+        } else {
+            logD(TAG, logTag + "Not removing renderer as it did not exist.");
+        }
+        videoTrackSub = null;
+        logD(TAG, logTag + "Video removed.");
+        logD(TAG, logTag + "OK.");
+    }
+
+    /**
+     * Switch the mirroring of the specified videoRenderer to the specified value.
+     *
+     * @param toMirror If true, renderer will be mirrored, else not.
+     * @param renderer The videoRenderer to be mirrored
+     * @param forPub   If true, will be performed for the Publisher's videoRenderer,
+     *                 else for the Subscriber's videoRenderer.
+     */
+    private void switchMirror(boolean toMirror, VideoRenderer renderer, boolean forPub) {
+        String logTag = "[Mirror][Switch]";
+
+        if (forPub) {
+            logTag += "[Pub] ";
+            mirroredPub = toMirror;
+        } else {
+            logTag += "[Sub] ";
+            mirroredSub = toMirror;
+        }
+
+        if (renderer == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return;
+        }
+        renderer.setMirror(toMirror);
+
+        logD(TAG, logTag + "Set mirroring for videoRenderer to: " + toMirror + ".");
+    }
+
+    private void setMirroredPub(boolean isMirroredPub) {
+        mirroredPub = isMirroredPub;
+    }
+
+    /**
+     * If the active videoSource is a front facing camera, it will be mirrored.
+     * If not, it will be set to not mirrored.
+     */
+    private void mirrorFrontCamera() {
+        if (videoSource.getType() == NDI) {
+            switchMirror(false, getRendererPub(), true);
+            return;
+        }
+        CameraEnumerator cameraEnumerator;
+        String name = getVideoSource(true).getName();
+        if (Media.isCamera2Supported(context)) {
+            cameraEnumerator = new Camera2Enumerator(context);
+        } else {
+            cameraEnumerator = new Camera1Enumerator();
+        }
+        if (cameraEnumerator.isFrontFacing(name)) {
+            switchMirror(true, getRendererPub(), true);
+        } else {
+            switchMirror(false, getRendererPub(), true);
+        }
+    }
+
+    //**********************************************************************************************
+    // Publish - Codecs
     //**********************************************************************************************
 
     /**
-     * Get a String that describes a MCVideoCapabilities.
+     * Set the current audio/videoCodec at the audio/videoCodecIndex of the current
+     * audio/videoCodecList,
+     * and in the {@link Publisher.Option} as preferred codecs if available and NOT currently publishing.
      */
-    private String getCapabilityStr(VideoCapabilities cap) {
-        String name;
-        if (cap == null) {
-            name = "Cap: N.A.";
+    private void setCodecs() {
+        String logTag = "[Codec][Set] ";
+        final String none = "None";
+        String ac = none;
+        String vc = none;
+
+        getCodecList(true);
+        getCodecList(false);
+
+        logD(TAG, logTag + "Selecting a new one based on selected index.");
+
+        if (audioCodecList == null || audioCodecList.size() < 1) {
+            logD(TAG, logTag + "Failed to set audio codec as none was available!");
         } else {
-            // Note: FPS given in frames per 1000 seconds (FPKS).
-            name = cap.width + "x" + cap.height + " fps:" + cap.fps / 1000;
+            int size = audioCodecList.size();
+
+            // If the selected index is larger than size, set it to maximum size.
+            if (audioCodecIndex >= size) {
+                logD(TAG, logTag + "Resetting audioCodecIndex to " + (size - 1) + "as it is greater than " +
+                        "size of list (" + size + ")!");
+                setCodecIndex(size - 1, true);
+            }
+            if (audioCodecIndex < 0) {
+                logD(TAG, logTag + "Resetting audioCodecIndex to 0 as it was negative!");
+                setCodecIndex(0, true);
+                return;
+            }
+            ac = audioCodecList.get(audioCodecIndex);
         }
-        return name;
+
+        if (videoCodecList == null || videoCodecList.size() < 1) {
+            logD(TAG, logTag + "Failed to set video codec as none was available!");
+        } else {
+            int size = videoCodecList.size();
+
+            // If the selected index is larger than size, set it to maximum size.
+            if (videoCodecIndex >= size) {
+                logD(TAG, logTag + "Resetting videoCodecIndex to " + (size - 1) + "as it is greater than " +
+                        "size of list (" + size + ")!");
+                setCodecIndex(size - 1, false);
+            }
+            if (videoCodecIndex < 0) {
+                logD(TAG, logTag + "Resetting videoCodecIndex to 0 as it was negative!");
+                setCodecIndex(0, false);
+                return;
+            }
+            vc = videoCodecList.get(videoCodecIndex);
+        }
+
+
+        logD(TAG, logTag + "Selected at index:" + audioCodecIndex + "/" + videoCodecIndex +
+                " is: " + ac + "/" + vc + ".");
+
+        String log = logTag + "OK. ";
+        if (publisher != null) {
+            if (!publisher.isPublishing()) {
+                if (!none.equals(ac)) {
+                    audioCodec = ac;
+                    optionPub.audioCodec = Optional.of(ac);
+                    log += "Set preferred Audio:" + audioCodec + " on Publisher. ";
+                } else {
+                    log += "Audio NOT set on Publisher.";
+                }
+                if (!none.equals(vc)) {
+                    videoCodec = vc;
+                    optionPub.videoCodec = Optional.of(vc);
+                    log += "Set preferred Video:" + videoCodec + " on Publisher.";
+                } else {
+                    log += "Video NOT set on Publisher.";
+                }
+
+            } else {
+                log += "NOT set, as publishing is ongoing: ";
+            }
+        } else {
+            log += "NOT set, as publisher does not exists: ";
+            audioCodec = ac;
+            videoCodec = vc;
+        }
+        logD(TAG, log);
     }
+
+    /**
+     * Gets the index of the next available codec.
+     * If at end of codec range, cycle to start of the other end.
+     * Returns null if none available.
+     *
+     * @param ascending If true, cycle in the direction of increasing index,
+     *                  otherwise cycle in opposite direction.
+     * @param forAudio  If true, this is for audio codecs, otherwise for video codecs.
+     * @return
+     */
+    private Integer codecIndexNext(boolean ascending, boolean forAudio) {
+        String logTag = "[Codec][Index][Next] ";
+        int now;
+
+        if (forAudio) {
+            logTag = "[Audio]" + logTag;
+            now = audioCodecIndex;
+        } else {
+            logTag = "[Video]" + logTag;
+            now = videoCodecIndex;
+        }
+
+        int size;
+        ArrayList<String> codecList = getCodecList(forAudio);
+        size = codecList.size();
+        if (codecList == null || size < 1) {
+            logD(TAG, logTag + "Failed as there is no codec!");
+            return null;
+        }
+
+        return Utils.indexNext(size, now, ascending, logTag);
+    }
+    //**********************************************************************************************
+    // Connect
+    //**********************************************************************************************
+
+    /**
+     * Millicast methods to connect to Millicast for publishing.
+     * Publishing credentials required.
+     * If connecting requirements are met, will return true and trigger SDK to start connecting to Millicast. Otherwise, will return false.
+     * Actual connection success will be reported by {@link Publisher.Listener#onConnected()}.
+     */
+    private boolean connectPubMc() {
+        String logTag = "[Pub][Con][Mc] ";
+
+        // Set Credentials
+        Publisher.Credential creds = publisher.getCredentials();
+        creds.apiUrl = getUrlPub(CURRENT);
+        creds.streamName = getStreamNamePub(CURRENT);
+        creds.token = getTokenPub(CURRENT);
+        publisher.setCredentials(creds);
+        logD(TAG, logTag + "Set Credentials.");
+
+        // Connect Publisher to Millicast.
+        boolean success = false;
+        String error = logTag + "Failed!";
+        try {
+            success = publisher.connect();
+        } catch (Exception e) {
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Connecting to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Millicast methods to disconnect Publisher from Millicast.
+     */
+    private boolean disconnectPubMc() {
+        String logTag = "[Pub][Con][X][Mc] ";
+
+        // Disconnect from Millicast.
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            publisher.disconnect();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Disconnecting from Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Millicast methods to connect to Millicast for subscribing.
+     * Subscribing credentials required.
+     * If connecting requirements are met, will return true and trigger SDK to start connecting to Millicast. Otherwise, will return false.
+     * Actual connection success will be reported by {@link Subscriber.Listener#onConnected()}.
+     */
+    private boolean connectSubMc() {
+        String logTag = "[Sub][Con][Mc] ";
+
+        // Set Credentials
+        Subscriber.Credential creds = subscriber.getCredentials();
+        creds.accountId = getAccountId(CURRENT);
+        creds.streamName = getStreamNameSub(CURRENT);
+        creds.apiUrl = getUrlSub(CURRENT);
+        // If a Subscribe Token is required, add it.
+        // If it is not required:
+        // - There is no need to add it.
+        // - Adding a valid Subscribe Token is harmless.
+        String tokenSub = getTokenSub(CURRENT);
+        if (tokenSub != null && !tokenSub.isEmpty()) {
+            creds.token = Optional.of(tokenSub);
+            logD(TAG, logTag + "Added Subscribe Token.");
+        }
+        subscriber.setCredentials(creds);
+        logD(TAG, logTag + "Set Credentials.");
+
+        // Connect Subscriber to Millicast.
+        boolean success = false;
+        String error = logTag + "Failed!";
+        try {
+            success = subscriber.connect();
+        } catch (Exception e) {
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Connecting to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Millicast methods to disconnect Subscriber from Millicast.
+     */
+    private boolean disconnectSubMc() {
+        String logTag = "[Sub][Con][X][Mc] ";
+
+        // Disconnect from Millicast.
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            subscriber.disconnect();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Disconnecting from Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    //**********************************************************************************************
+    // Publish
+    //**********************************************************************************************
+
+    /**
+     * Get the Publisher's listener.
+     * If none exist, create and return a new one.
+     */
+    private PubListener getListenerPub() {
+        String logTag = "[Pub][Ltn] ";
+        if (listenerPub == null) {
+            logD(TAG, logTag + "PubListener does not exist...");
+            listenerPub = new PubListener();
+            logD(TAG, logTag + "Created a new PubListener.");
+        } else {
+            logD(TAG, logTag + "Returning existing one.");
+        }
+        return listenerPub;
+    }
+
+    /**
+     * Get the Publisher.
+     * If none exist, create and return a new one.
+     *
+     * @return
+     */
+    private Publisher getPublisher() {
+        if (publisher != null) {
+            logD(TAG, "[getPublisher] Returning existing Publisher.");
+            return publisher;
+        }
+
+        logD(TAG, "[getPublisher] Trying to create one...");
+        publisher = Publisher.createPublisher(getListenerPub());
+
+        logD(TAG, "[getPublisher] Created and returning a new Publisher.");
+        return publisher;
+    }
+
+    /**
+     * Millicast methods to start publishing.
+     * Audio and video tracks that are already captured will be added to Publisher.
+     * {@link Publisher.Option} (including preferred codecs) will be set into Publisher.
+     * If publishing requirements are met, will return true and trigger SDK to start publish. Otherwise, will return false.
+     * Actual publishing success will be reported by {@link Publisher.Listener#onPublishing()}.
+     */
+    private boolean startPubMc() {
+        String logTag = "[Pub][Start][Mc] ";
+
+        if (audioTrackPub != null) {
+            publisher.addTrack(audioTrackPub);
+            logD(TAG, logTag + "Audio track added.");
+        } else {
+            logD(TAG, logTag + "Audio track NOT added as it does not exist.");
+        }
+
+        if (videoTrackPub != null) {
+            publisher.addTrack(videoTrackPub);
+            logD(TAG, logTag + "Video track added.");
+        } else {
+            logD(TAG, logTag + "Video track NOT added as it does not exist.");
+        }
+
+        // Set Publisher Options
+        Optional sourceIdPub = getOptSourceIdPub(CURRENT);
+        optionPub.sourceId = sourceIdPub;
+        logD(TAG, logTag + "SourceId (" + sourceIdPub + ") set in Option.");
+        setCodecs();
+        logD(TAG, logTag + "Preferred codecs set in Option.");
+        publisher.setOptions(optionPub);
+        logD(TAG, logTag + "Options set.");
+
+        // Publish to Millicast
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            publisher.publish();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Starting publish to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Millicast methods to stop publishing.
+     */
+    private boolean stopPubMc() {
+        String logTag = "[Pub][Stop][Mc] ";
+
+        // Stop publishing to Millicast.
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            publisher.unpublish();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Stopped publishing to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Check if we are currently publishing.
+     */
+    private boolean isPublishing() {
+        String logTag = "[Pub][?] ";
+        if (publisher == null || !publisher.isPublishing()) {
+            logD(TAG, logTag + "No!");
+            return false;
+        }
+        logD(TAG, logTag + "Yes.");
+        return true;
+    }
+
+    //**********************************************************************************************
+    // Subscribe
+    //**********************************************************************************************
+
+    /**
+     * Get the Subscriber's listener.
+     * If none exist, create and return a new one.
+     */
+    private SubListener getListenerSub() {
+        String logTag = "[Sub][Ltn] ";
+        if (listenerSub == null) {
+            logD(TAG, logTag + "SubListener does not exist...");
+            listenerSub = new SubListener();
+            logD(TAG, logTag + "Created a new SubListener.");
+        } else {
+            logD(TAG, logTag + "Returning existing one.");
+        }
+        return listenerSub;
+    }
+
+    /**
+     * Get the Subscriber.
+     * If none exist, create and return a new one.
+     *
+     * @return
+     */
+    private Subscriber getSubscriber() {
+        if (subscriber != null) {
+            logD(TAG, "[getSubscriber] Returning existing Subscriber.");
+            return subscriber;
+        }
+
+        logD(TAG, "[getSubscriber] Trying to create one...");
+        subscriber = Subscriber.createSubscriber(getListenerSub());
+        logD(TAG, "[getSubscriber] Created and returning a new Subscriber.");
+        return subscriber;
+    }
+
+    /**
+     * Millicast methods to start subscribing.
+     * {@link Subscriber.Option} will be set into Subscriber.
+     * If subscribing requirements are met, will return true and trigger SDK to start subscribe. Otherwise, will return false.
+     * Actual subscribing success will be reported by {@link Subscriber.Listener#onSubscribed()}.
+     */
+    private boolean startSubMc() {
+        String logTag = "[Pub][Start][Mc] ";
+
+        // Set Subscriber Options
+        subscriber.setOptions(optionSub);
+        logD(TAG, logTag + "Options set.");
+
+        // Subscribe to Millicast
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            subscriber.subscribe();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Starting subscribe to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Millicast methods to stop subscribing.
+     */
+    private boolean stopSubMc() {
+        String logTag = "[Sub][Stop][Mc] ";
+
+        // Stop subscribing to Millicast.
+        boolean success = true;
+        String error = logTag + "Failed!";
+        try {
+            subscriber.unsubscribe();
+        } catch (Exception e) {
+            success = false;
+            error += " Error: " + e.getLocalizedMessage();
+            logD(TAG, error);
+        }
+
+        if (success) {
+            logD(TAG, logTag + "OK. Stopped subscribing to Millicast.");
+        } else {
+            logD(TAG, error);
+        }
+        return success;
+    }
+
+    /**
+     * Check if we are currently subscribing.
+     */
+    private boolean isSubscribing() {
+        String logTag = "[Sub][?] ";
+        if (subscriber == null || !subscriber.isSubscribed()) {
+            logD(TAG, logTag + "No!");
+            return false;
+        }
+        logD(TAG, logTag + "Yes.");
+        return true;
+    }
+
+    //**********************************************************************************************
+    // Utilities
+    //**********************************************************************************************
 
     /**
      * Get a String that describes a MCVideoSource.
@@ -3620,6 +3969,20 @@ public class MillicastManager {
         name = "Cam:" + vs.getName();
         if (longForm) {
             name += " (" + vs.getType() + ") " + "id:" + vs.getId();
+        }
+        return name;
+    }
+
+    /**
+     * Get a String that describes a MCVideoCapabilities.
+     */
+    private String getCapabilityStr(VideoCapabilities cap) {
+        String name;
+        if (cap == null) {
+            name = "Cap: N.A.";
+        } else {
+            // Note: FPS given in frames per 1000 seconds (FPKS).
+            name = cap.width + "x" + cap.height + " fps:" + cap.fps / 1000;
         }
         return name;
     }
