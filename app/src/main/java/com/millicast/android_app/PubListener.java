@@ -18,7 +18,7 @@ public class PubListener implements Publisher.Listener {
     public static final String TAG = "PubListener";
 
     private MillicastManager mcMan;
-    private String logTag = "[Pub][Ltn]";
+    private String logTagClass = "[Pub][Ltn]";
 
     public PubListener() {
         mcMan = MillicastManager.getSingleInstance();
@@ -28,19 +28,19 @@ public class PubListener implements Publisher.Listener {
     public void onPublishing() {
         mcMan.setPubState(PUBLISHING);
         setUI();
-        String logTag = this.logTag + "[On] ";
+        String logTag = logTagClass + "[On] ";
         makeSnackbar(logTag, "OK. Publish started.", mcMan.getFragmentPub());
     }
 
     @Override
     public void onPublishingError(String s) {
-        String logTag = this.logTag + "[Error] ";
+        String logTag = logTagClass + "[Error] ";
         makeSnackbar(logTag, "Publish Error:" + s, mcMan.getFragmentPub());
     }
 
     @Override
     public void onConnected() {
-        String logTag = this.logTag + "[Con][On] ";
+        String logTag = logTagClass + "[Con][On] ";
         mcMan.setPubState(CONNECTED);
         setUI();
         makeSnackbar(logTag, "Connected", mcMan.getFragmentPub());
@@ -49,7 +49,7 @@ public class PubListener implements Publisher.Listener {
 
     @Override
     public void onConnectionError(String reason) {
-        String logTag = this.logTag + "[Con][Error] ";
+        String logTag = logTagClass + "[Con][Error] ";
         mcMan.setPubState(DISCONNECTED);
         setUI();
         makeSnackbar(logTag, "Connection FAILED! " + reason, mcMan.getFragmentPub());
@@ -57,32 +57,32 @@ public class PubListener implements Publisher.Listener {
 
     @Override
     public void onSignalingError(String s) {
-        String logTag = this.logTag + "[Sig][Error] ";
+        String logTag = logTagClass + "[Sig][Error] ";
         makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentPub());
     }
 
     @Override
     public void onStatsReport(RTCStatsReport statsReport) {
-        String logTag = this.logTag + "[Stat] ";
-        String log = logTag + statsReport.toString();
-        logD(TAG, log);
+        String logTag = logTagClass + "[Stat] ";
+        String log = statsReport.toString();
+        logD(TAG, log, logTag);
     }
 
     @Override
     public void onViewerCount(int count) {
-        String logTag = this.logTag + "[Viewer] ";
+        String logTag = logTagClass + "[Viewer] ";
         logD(TAG, logTag + "Count: " + count + ".");
     }
 
     @Override
     public void onActive() {
-        String logTag = this.logTag + "[Viewer][Active] ";
+        String logTag = logTagClass + "[Viewer][Active] ";
         logD(TAG, logTag + "A viewer has subscribed to our stream.");
     }
 
     @Override
     public void onInactive() {
-        String logTag = this.logTag + "[Viewer][Active][In] ";
+        String logTag = logTagClass + "[Viewer][Active][In] ";
         logD(TAG, logTag + "No viewers are currently subscribed to our stream.");
     }
 

@@ -3,13 +3,14 @@ This file documents the release notes for each version of the Millicast Java SDK
 SA APIs refer to public methods provided by the SA class, MillicastManager.
 
 ## 1.4.0 (2022-10-??)
-Upgraded to use SDK 1.4.0, synced Android & iOS SA, and improved documentation.
+Upgraded to use SDK 1.4.0, synced Android & iOS SA, improved logging and improved documentation.
 ### Major changes
 - Upgraded to new SDK 1.4.0.
 - Greatly synchronised MillicastManager code between Android and iOS SAs, including:
   - Variable, state and method names.
   - Init, Publisher & Subscriber connect/disconnect, start/stop methods.
   - Methods categorised into similar sections.
+- Improved logcat printing of long strings, for e.g. stats reports.
 - Every class now has a brief documentation on its purpose.
 ### Fixed
 - N.A.

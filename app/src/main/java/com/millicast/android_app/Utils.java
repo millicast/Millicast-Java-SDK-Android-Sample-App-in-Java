@@ -33,7 +33,7 @@ public class Utils {
 
     public static final String TAG = "Utils";
     static SharedPreferences sharedPreferences;
-    static int maxLogLen = 1000;
+    static int maxLogLen = 4000;
 
     //**********************************************************************************************
     // Data structure
@@ -94,13 +94,24 @@ public class Utils {
      *
      * @param TAG
      * @param longString
+     * @param logTag     An additional tag to include in front of each printed line.
      */
-    public static void logD(String TAG, String longString) {
+    public static void logD(String TAG, String longString, String logTag) {
         for (int i = 0; i < longString.length(); i += maxLogLen) {
             int end = i + maxLogLen;
             end = end > longString.length() ? longString.length() : end;
-            Log.d(TAG, longString.substring(i, end));
+            Log.d(TAG, logTag + longString.substring(i, end));
         }
+    }
+
+    /**
+     * The same as {@link #logD} except there is no inclusion of an additional logTag.
+     *
+     * @param TAG
+     * @param longString
+     */
+    public static void logD(String TAG, String longString) {
+        logD(TAG, longString, "");
     }
 
     //**********************************************************************************************

@@ -23,7 +23,7 @@ public class SubListener implements Subscriber.Listener {
     public static final String TAG = "SubListener";
 
     private final MillicastManager mcMan;
-    private String logTag = "[Sub][Ltn]";
+    private String logTagClass = "[Sub][Ltn]";
 
     public SubListener() {
         mcMan = MillicastManager.getSingleInstance();
@@ -33,19 +33,19 @@ public class SubListener implements Subscriber.Listener {
     public void onSubscribed() {
         mcMan.setSubState(SUBSCRIBING);
         setUI();
-        String logTag = this.logTag + "[On] ";
+        String logTag = logTagClass + "[On] ";
         makeSnackbar(logTag, "Subscribing", mcMan.getFragmentSub());
     }
 
     @Override
     public void onSubscribedError(String s) {
-        String logTag = this.logTag + "[Error] ";
+        String logTag = logTagClass + "[Error] ";
         makeSnackbar(logTag, "Subscribe Error:" + s, mcMan.getFragmentSub());
     }
 
     @Override
     public void onConnected() {
-        String logTag = this.logTag + "[Con][On] ";
+        String logTag = logTagClass + "[Con][On] ";
         mcMan.setSubState(CONNECTED);
         makeSnackbar(logTag, "Connected", mcMan.getFragmentSub());
         mcMan.startSub();
@@ -53,7 +53,7 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onConnectionError(String reason) {
-        String logTag = this.logTag + "[Con][Error] ";
+        String logTag = logTagClass + "[Con][Error] ";
         mcMan.setSubState(MCStates.SubscriberState.DISCONNECTED);
         setUI();
         makeSnackbar(logTag, "Connection FAILED! " + reason, mcMan.getFragmentSub());
@@ -61,26 +61,26 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onStopped() {
-        String logTag = "[Sub][Ltn][Stop] ";
+        String logTag = logTagClass + "[Stop] ";
         logD(TAG, logTag + "OK.");
     }
 
     @Override
     public void onSignalingError(String s) {
-        String logTag = this.logTag + "[Sig][Error] ";
+        String logTag = logTagClass + "[Sig][Error] ";
         makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentSub());
     }
 
     @Override
     public void onStatsReport(RTCStatsReport statsReport) {
-        String logTag = this.logTag + "[Stat] ";
-        String log = logTag + statsReport.toString();
-        logD(TAG, log);
+        String logTag = logTagClass + "[Stat] ";
+        String log = statsReport.toString();
+        logD(TAG, log, logTag);
     }
 
     @Override
     public void onTrack(VideoTrack videoTrack, Optional<String> mid) {
-        String logTag = this.logTag + "[Track][Video] ";
+        String logTag = logTagClass + "[Track][Video] ";
         String trackId = videoTrack.getName();
         mcMan.setMidVideo(mid.get());
         logD(TAG, logTag + "Name: " + trackId + ", TransceiverId: " + mid + " has been negotiated.");
@@ -92,7 +92,7 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onTrack(AudioTrack audioTrack, Optional<String> mid) {
-        String logTag = this.logTag + "[Track][Audio] ";
+        String logTag = logTagClass + "[Track][Audio] ";
         String trackId = audioTrack.getName();
         mcMan.setMidAudio(mid.get());
         logD(TAG, logTag + "Name: " + trackId + ", TransceiverId: " + mid + " has been negotiated.");
@@ -104,7 +104,7 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onActive(String streamId, String[] tracks, Optional<String> sourceId) {
-        String logTag = this.logTag + "[Active][Source][Id]";
+        String logTag = logTagClass + "[Active][Source][Id]";
         String source = "";
         if (sourceId.isPresent()) {
             source = sourceId.get();
@@ -153,7 +153,7 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onInactive(String streamId, Optional<String> sourceId) {
-        String logTag = this.logTag + "[Active][In][Source][Id]";
+        String logTag = logTagClass + "[Active][In][Source][Id]";
         String source = "";
         if (sourceId.isPresent()) {
             source = sourceId.get();
@@ -186,7 +186,7 @@ public class SubListener implements Subscriber.Listener {
      */
     @Override
     public void onLayers(String mid, LayerData[] activeLayers, LayerData[] inactiveLayers) {
-        String logTag = this.logTag + "[Layer] ";
+        String logTag = logTagClass + "[Layer] ";
         String log = "mid:" + mid + " Active(" + activeLayers.length + "):[" +
                 SourceInfo.getLayerListStr(activeLayers) + "]," +
                 " Inactive(" + inactiveLayers.length + "):[" +
@@ -204,7 +204,7 @@ public class SubListener implements Subscriber.Listener {
      */
     @Override
     public void onVad(String mid, Optional<String> sourceId) {
-        String logTag = this.logTag + "[Vad][Source][Id]";
+        String logTag = logTagClass + "[Vad][Source][Id]";
         String source = "";
         if (sourceId.isPresent()) {
             source = sourceId.get();
@@ -223,7 +223,7 @@ public class SubListener implements Subscriber.Listener {
 
     @Override
     public void onViewerCount(int count) {
-        String logTag = this.logTag + "[Viewer] ";
+        String logTag = logTagClass + "[Viewer] ";
         logD(TAG, logTag + "Count: " + count + ".");
     }
 
