@@ -36,8 +36,8 @@ android {
         minSdkVersion 24
         //noinspection ExpiredTargetSdkVersion
         targetSdkVersion 28
-        versionCode 6
-        versionName "1.3.0"
+        versionCode 7
+        versionName "1.4.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -72,7 +72,7 @@ dependencies {
 
     // Add Millicast SDK via one of the methods below.
     // For download via Maven from GitHub Packages:
-    implementation 'com.millicast:millicast-sdk-android:1.3.0'
+    implementation 'com.millicast:millicast-sdk-android:1.4.1'
     // For manual addition of AAR file:
     // implementation project(":MillicastSDK")
 }
