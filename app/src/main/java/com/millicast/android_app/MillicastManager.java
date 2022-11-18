@@ -188,8 +188,8 @@ public class MillicastManager {
     // Display
     private VideoRenderer rendererPub;
     private VideoRenderer rendererSub;
+    // Whether Publisher's local video view is mirrored.
     private boolean mirroredPub = false;
-    private boolean mirroredSub = false;
     private ScalingType scalingPub = SCALE_ASPECT_FIT;
     private ScalingType scalingSub = SCALE_ASPECT_FIT;
 
@@ -1086,88 +1086,107 @@ public class MillicastManager {
     //**********************************************************************************************
 
     /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Publisher.
+     * Gets the {@link VideoRenderer} for the Publisher.
+     * Creates one if none currently exists.
      * By default this renderer will be
      * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
-     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT} and set to be
-     * {@link org.webrtc.SurfaceViewRenderer#setMirror(boolean) mirrored} to allow the Publisher
-     * to have a natural feel when looking at the local Publisher view.
-     * The scaling and mirroring effects are not transmitted to the Subscriber(s).
+     * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
+     * The scaling effect is local only and is not transmitted to the Subscriber(s).
      *
      * @return {@link VideoRenderer}
      */
     public VideoRenderer getRendererPub() {
+        String logTag = "[Video][Render][er][Pub] ";
         // If it's not available, create it with application context.
         if (rendererPub == null) {
             rendererPub = new VideoRenderer(context);
             rendererPub.setScalingType(scalingPub);
 
-            logD(TAG, "[getPubRenderer] Created renderer with application context.");
+            logD(TAG, logTag + "Created renderer with application context.");
         } else {
-            logD(TAG, "[getPubRenderer] Using existing renderer.");
+            logD(TAG, logTag + "Using existing renderer.");
         }
         return rendererPub;
     }
 
     /**
-     * Gets (creates if none exists) a {@link VideoRenderer} for the Subscriber.
+     * Gets the {@link VideoRenderer} for the Subscriber.
+     * Creates one if none currently exists.
      * By default this renderer will be
      * {@link org.webrtc.SurfaceViewRenderer#setScalingType(ScalingType) scaled} to
      * {@link ScalingType#SCALE_ASPECT_FIT SCALE_ASPECT_FIT}.
-     * The scaling effect is not transmitted to the Publisher.
+     * The scaling effect is local only and is not transmitted to the Publisher.
      *
      * @return {@link VideoRenderer}
      */
     public VideoRenderer getRendererSub() {
+        String logTag = "[Video][Render][er][Sub] ";
         // If it's not available, create it with application context.
         if (rendererSub == null) {
             rendererSub = new VideoRenderer(context);
             rendererSub.setScalingType(scalingSub);
-            logD(TAG, "[getSubRenderer] Created renderer with application context.");
+            logD(TAG, logTag + "Created renderer with application context.");
         } else {
-            logD(TAG, "[getSubRenderer] Using existing renderer.");
+            logD(TAG, logTag + "Using existing renderer.");
         }
         return rendererSub;
     }
 
     /**
-     * Render the subscribed video.
-     * Will execute on UI thread.
+     * Renders the subscribed video.
+     * Executes on UI thread.
      *
      * @param videoTrack
      */
-    public void subRenderVideo(VideoTrack videoTrack) {
+    public void renderVideoSub(VideoTrack videoTrack) {
         getMainActivity().runOnUiThread(() -> {
             setRenderVideoTrackSub(videoTrack);
         });
     }
 
+    /**
+     * Checks if the Publisher's local video view is mirrored.
+     *
+     * @return True if mirrored, false otherwise.
+     */
     public boolean isMirroredPub() {
+        String logTag = "[Mirror][Pub][?] ";
+        logD(TAG, logTag + mirroredPub + ".");
         return mirroredPub;
     }
 
     /**
-     * Switch the mirroring of the specified videoRenderer from mirrored to not mirrored,
-     * and vice-versa.
+     * Sets the mirroring of the Publisher's local video view to the specified value.
+     * The mirroring effect is local only and is not transmitted to the Subscriber(s).
      *
-     * @param forPub If true, will be performed for the Publisher's videoRenderer,
-     *               else for the Subscriber's videoRenderer.
+     * @param toMirror If true, view is mirrored, else not.
      */
-    public void switchMirror(boolean forPub) {
-        String logTag = "[Mirror][Switch]";
-        VideoRenderer renderer = rendererSub;
-        boolean toMirror;
-        if (forPub) {
-            logTag += "[Pub] ";
-            renderer = rendererPub;
-            toMirror = !mirroredPub;
-        } else {
-            logTag += "[Sub] ";
-            toMirror = !mirroredSub;
+    private void setMirror(boolean toMirror) {
+        String logTag = "[Mirror][Set][Pub] ";
+
+        if (getRendererPub() == null) {
+            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
+            return;
         }
 
-        logD(TAG, logTag + "Trying to set mirroring for videoRenderer to: " + toMirror + ".");
-        switchMirror(toMirror, renderer, forPub);
+        if (toMirror == mirroredPub) {
+            logD(TAG, logTag + "Not setting mirroring to " + toMirror + " as current mirror state is already " + mirroredPub + ".");
+            return;
+        }
+
+        rendererPub.setMirror(toMirror);
+        mirroredPub = toMirror;
+        logD(TAG, logTag + "OK. Updated mirroredPub to " + toMirror + ".");
+    }
+
+    /**
+     * Switches the mirroring of the Publisher's local video view from mirrored to not mirrored,
+     * and vice-versa.
+     */
+    public void switchMirror() {
+        String logTag = "[Mirror][Switch][Pub] ";
+        logD(TAG, logTag + "Trying to set mirroring for videoRenderer to: " + !mirroredPub + ".");
+        setMirror(!mirroredPub);
     }
 
     /**
@@ -3076,7 +3095,7 @@ public class MillicastManager {
     }
 
     /**
-     * Using the selected videoSource and capability, capture video into a pubVideoTrack.
+     * Using the selected videoSource and capability, capture video into a video track for publishing.
      */
     private void startCaptureVideo() {
         String logTag = "[Capture][Video][Start] ";
@@ -3135,7 +3154,7 @@ public class MillicastManager {
             rendererPub.release();
             rendererPub = null;
         }
-        setMirroredPub(false);
+        mirroredPub = false;
         Log.d(TAG, logTag + "Publisher renderer removed.");
         setVideoEnabledPub(false);
         videoTrackPub = null;
@@ -3388,44 +3407,15 @@ public class MillicastManager {
     }
 
     /**
-     * Switch the mirroring of the specified videoRenderer to the specified value.
-     *
-     * @param toMirror If true, renderer will be mirrored, else not.
-     * @param renderer The videoRenderer to be mirrored
-     * @param forPub   If true, will be performed for the Publisher's videoRenderer,
-     *                 else for the Subscriber's videoRenderer.
-     */
-    private void switchMirror(boolean toMirror, VideoRenderer renderer, boolean forPub) {
-        String logTag = "[Mirror][Switch]";
-
-        if (forPub) {
-            logTag += "[Pub] ";
-            mirroredPub = toMirror;
-        } else {
-            logTag += "[Sub] ";
-            mirroredSub = toMirror;
-        }
-
-        if (renderer == null) {
-            logD(TAG, logTag + "Failed! The videoRenderer is not available.");
-            return;
-        }
-        renderer.setMirror(toMirror);
-
-        logD(TAG, logTag + "Set mirroring for videoRenderer to: " + toMirror + ".");
-    }
-
-    private void setMirroredPub(boolean isMirroredPub) {
-        mirroredPub = isMirroredPub;
-    }
-
-    /**
-     * If the active videoSource is a front facing camera, it will be mirrored.
-     * If not, it will be set to not mirrored.
+     * By default, if the active video source is a front facing camera, the local Publisher video view will be mirrored,
+     * to give the Publisher a natural feel when looking at the local Publisher video view.
+     * If it is a non-front facing camera, the local video view will be set to not mirrored.
      */
     private void mirrorFrontCamera() {
+        String logTag = "[Video][Front][Mirror] ";
         if (videoSource.getType() == NDI) {
-            switchMirror(false, getRendererPub(), true);
+            logD(TAG, logTag + "Not mirroring NDI view.");
+            setMirror(false);
             return;
         }
         CameraEnumerator cameraEnumerator;
@@ -3436,9 +3426,11 @@ public class MillicastManager {
             cameraEnumerator = new Camera1Enumerator();
         }
         if (cameraEnumerator.isFrontFacing(name)) {
-            switchMirror(true, getRendererPub(), true);
+            logD(TAG, logTag + "Mirroring front camera view...");
+            setMirror(true);
         } else {
-            switchMirror(false, getRendererPub(), true);
+            logD(TAG, logTag + "Not mirroring non-front camera view...");
+            setMirror(false);
         }
     }
 

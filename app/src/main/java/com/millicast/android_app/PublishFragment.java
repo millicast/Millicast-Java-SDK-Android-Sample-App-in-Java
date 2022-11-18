@@ -309,7 +309,7 @@ public class PublishFragment extends Fragment {
         String logTag = "[Mirror][Pub] ";
         String log;
         if (linearLayoutVideo != null) {
-            mcManager.switchMirror(true);
+            mcManager.switchMirror();
         }
         log = mcManager.isMirroredPub() + ".";
         makeSnackbar(logTag, log, this);

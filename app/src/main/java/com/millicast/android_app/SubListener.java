@@ -85,7 +85,7 @@ public class SubListener implements Subscriber.Listener {
         mcMan.setMidVideo(mid.get());
         logD(TAG, logTag + "Name: " + trackId + ", TransceiverId: " + mid + " has been negotiated.");
 
-        mcMan.subRenderVideo(videoTrack);
+        mcMan.renderVideoSub(videoTrack);
         setUI();
         makeSnackbar(logTag, "Video received", mcMan.getFragmentSub());
     }
