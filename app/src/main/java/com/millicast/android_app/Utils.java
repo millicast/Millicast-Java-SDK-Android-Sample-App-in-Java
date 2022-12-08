@@ -18,7 +18,6 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.snackbar.Snackbar;
-import com.millicast.LayerData;
 import com.millicast.VideoRenderer;
 
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -282,7 +281,7 @@ public class Utils {
      * @param context
      * @return
      */
-    public static String getProperty(MillicastManager.Source source, String current, String file, String key, Context context) {
+    public static String getProperty(MCTypes.Source source, String current, String file, String key, Context context) {
         String value = null;
         String log = "[Prop][Get][" + source + "] " + key + ": ";
         switch (source) {
@@ -310,7 +309,7 @@ public class Utils {
      * @param context
      * @return
      */
-    public static boolean getProperty(MillicastManager.Source source, boolean current, boolean file, String key, Context context) {
+    public static boolean getProperty(MCTypes.Source source, boolean current, boolean file, String key, Context context) {
         boolean value = false;
         String log = "[Prop][Get][" + source + "] " + key + ": ";
         switch (source) {

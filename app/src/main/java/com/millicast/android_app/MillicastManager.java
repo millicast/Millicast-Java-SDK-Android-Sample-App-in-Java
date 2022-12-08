@@ -9,6 +9,7 @@ import android.util.Log;
 import com.millicast.AudioPlayback;
 import com.millicast.AudioSource;
 import com.millicast.AudioTrack;
+import com.millicast.BitrateSettings;
 import com.millicast.Client;
 import com.millicast.LayerData;
 import com.millicast.LogLevel;
@@ -21,6 +22,7 @@ import com.millicast.VideoCapabilities;
 import com.millicast.VideoRenderer;
 import com.millicast.VideoSource;
 import com.millicast.VideoTrack;
+import com.millicast.android_app.MCTypes.Source;
 
 import org.webrtc.Camera1Enumerator;
 import org.webrtc.Camera2Enumerator;
@@ -44,7 +46,7 @@ import static com.millicast.android_app.Constants.STREAM_NAME_SUB;
 import static com.millicast.android_app.Constants.TOKEN_SUB;
 import static com.millicast.android_app.Constants.URL_SUB;
 import static com.millicast.android_app.MCStates.*;
-import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.MCTypes.Source.CURRENT;
 import static com.millicast.android_app.Utils.getArrayStr;
 import static com.millicast.android_app.Utils.logD;
 import static org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT;
@@ -89,24 +91,6 @@ public class MillicastManager {
      * Set to true if camera should be restarted after switching to another App.
      */
     private boolean toRelockCamera = false;
-
-    /**
-     * The source of a setting value to read from or to write to.
-     */
-    public enum Source {
-        /**
-         * The current value in MillicastManager.
-         */
-        CURRENT,
-        /**
-         * The Constants.java file.
-         */
-        FILE,
-        /**
-         * Where the device saves value.
-         */
-        SAVED;
-    }
 
     /**
      * Millicast platform & credential values.
@@ -1386,8 +1370,45 @@ public class MillicastManager {
     }
 
     //**********************************************************************************************
-    // Publish - Codecs
+    // Publish - Options
     //**********************************************************************************************
+
+    /**
+     * Set the specified {@link BitrateSettings} to use for publishing.
+     * Setting this will only affect the next publish,
+     * and not the current publish if one is ongoing.
+     * Values set are only guidelines and will be affected by other factors such as the bandwidth available.
+     *
+     * @param bitrate
+     * @param type
+     */
+    public void setBitrate(int bitrate, MCTypes.Bitrate type) {
+        String logTag = "[Bitrate][Set]";
+        if (bitrate < 0) {
+            logD(TAG, logTag + " Failed! Bitrate value (" + bitrate + ") must be positive.");
+        }
+        if (getPublisher() == null) {
+            logD(TAG, logTag + " Failed! Publisher not available.");
+            return;
+        }
+
+        BitrateSettings settings = optionPub.bitrateSettings;
+        switch (type) {
+            case START:
+                logTag += "[Start] ";
+                settings.startBitrateKbps = Optional.of(bitrate);
+                break;
+            case MIN:
+                logTag += "[Min] ";
+                settings.minBitrateKbps = Optional.of(bitrate);
+                break;
+            case MAX:
+                logTag += "[Max] ";
+                settings.maxBitrateKbps = Optional.of(bitrate);
+                break;
+        }
+        logD(TAG, logTag + bitrate + "kbps.");
+    }
 
     /**
      * Get or generate (if null) the current list of Video Codec supported.
@@ -1686,17 +1707,6 @@ public class MillicastManager {
         fragmentPub = view;
         logD(TAG, logTag + "OK.");
     }
-
-    /**
-     * Override WebRTC bandwidth estimate (BWE) with the given value.
-     *
-     * @param value Set BWE to this value in bytes.
-     */
-    public void overrideBWE(int value) {
-        optionPub.bwe = Optional.of(value);
-        logD(TAG, "[overrideBWE] Overridden Publisher BWE to " + value + " bytes.");
-    }
-
     //**********************************************************************************************
     // Subscribe
     //**********************************************************************************************
@@ -3757,10 +3767,17 @@ public class MillicastManager {
         Optional sourceIdPub = getOptSourceIdPub(CURRENT);
         optionPub.sourceId = sourceIdPub;
         logD(TAG, logTag + "SourceId (" + sourceIdPub + ") set in Option.");
+
         setCodecs();
         logD(TAG, logTag + "Preferred codecs set in Option.");
+
+        setBitrate(300, MCTypes.Bitrate.START);
+        setBitrate(0, MCTypes.Bitrate.MIN);
+        setBitrate(2500, MCTypes.Bitrate.MAX);
+        logD(TAG, logTag + "Preferred bitrates set in Option.");
+
         publisher.setOptions(optionPub);
-        logD(TAG, logTag + "Options set.");
+        logD(TAG, logTag + "Options set in Publisher.");
 
         // Publish to Millicast
         boolean success = true;

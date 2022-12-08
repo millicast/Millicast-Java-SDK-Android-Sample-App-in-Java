@@ -21,7 +21,7 @@ import com.millicast.VideoTrack;
 import org.webrtc.RendererCommon;
 
 import static com.millicast.android_app.MCStates.*;
-import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.MCTypes.Source.CURRENT;
 import static com.millicast.android_app.MillicastManager.keyConVisible;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
@@ -79,9 +79,6 @@ public class PublishFragment extends Fragment {
         if (savedInstanceState == null) {
             // Will only lock if it's the first time.
             mcManager.setCameraLock(true);
-            if (mcManager.isRicohTheta(CURRENT)) {
-                mcManager.overrideBWE(40000000);
-            }
         } else {
             conVisible = savedInstanceState.getBoolean(keyConVisible);
         }

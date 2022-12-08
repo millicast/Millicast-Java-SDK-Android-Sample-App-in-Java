@@ -5,7 +5,7 @@ import android.os.Handler;
 import com.millicast.VideoSource;
 
 import static com.millicast.android_app.MCStates.*;
-import static com.millicast.android_app.MillicastManager.Source.CURRENT;
+import static com.millicast.android_app.MCTypes.Source.CURRENT;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 

@@ -14,14 +14,14 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.textfield.TextInputEditText;
-import com.millicast.android_app.MillicastManager.Source;
+import com.millicast.android_app.MCTypes.Source;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static android.graphics.Color.GRAY;
-import static com.millicast.android_app.MillicastManager.Source.CURRENT;
-import static com.millicast.android_app.MillicastManager.Source.FILE;
-import static com.millicast.android_app.MillicastManager.Source.SAVED;
+import static com.millicast.android_app.MCTypes.Source.CURRENT;
+import static com.millicast.android_app.MCTypes.Source.FILE;
+import static com.millicast.android_app.MCTypes.Source.SAVED;
 import static com.millicast.android_app.MillicastManager.keyAccountId;
 import static com.millicast.android_app.MillicastManager.keySourceIdPub;
 import static com.millicast.android_app.MillicastManager.keySourceIdPubEnabled;
