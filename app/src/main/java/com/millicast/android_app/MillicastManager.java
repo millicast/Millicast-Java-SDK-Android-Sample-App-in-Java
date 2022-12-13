@@ -93,7 +93,7 @@ public class MillicastManager {
     private boolean toRelockCamera = false;
 
     /**
-     * Millicast platform & credential values.
+     * Millicast platform and credential values.
      * Default values are assign from {@link Constants},
      * and updated with values in device memory, if these exist.
      * These can also be modified from the UI at the Millicast Settings page.
@@ -2479,7 +2479,6 @@ public class MillicastManager {
     /**
      * Relock the camera if it was unlocked when changing App.
      *
-     * @return
      */
     public void restoreCameraLock() {
         if (toRelockCamera) {
@@ -2492,7 +2491,6 @@ public class MillicastManager {
      * Record if camera should be restored when SA resumes.
      * Call only when SA stops.
      *
-     * @return
      */
     public void flagCameraRestore() {
         if (isCameraLocked) {
@@ -2807,7 +2805,6 @@ public class MillicastManager {
      * in the following list:
      * videoSourceSwitched, videoSource.
      *
-     * @return
      */
     private void setCapabilityList() {
         String logTag = "[Capability][List][Set] ";

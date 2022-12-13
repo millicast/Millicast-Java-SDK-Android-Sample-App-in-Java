@@ -331,10 +331,10 @@ public class SourceInfo {
 
     /**
      * Get a String representation of a {@link LayerData}.
-     * The default representation is:<br/>
+     * The default representation is:<br></br>
      * {@link LayerData#encodingId encodingId}(T:{@link LayerData#temporalLayerId temporalLayerId} S:{@link LayerData#spatialLayerId spatialLayerId})
-     * <br/>
-     * Long form representation:<br/>
+     * <br></br>
+     * Long form representation:<br></br>
      * {@link LayerData#encodingId encodingId}(T:{@link LayerData#temporalLayerId temporalLayerId}/{@link LayerData#maxTemporalLayerId maxTemporalLayerId} S:{@link LayerData#spatialLayerId spatialLayerId}/{@link LayerData#maxSpatialLayerId maxSpatialLayerId})
      *
      * @param ld       The {@link LayerData} for which to get a String.

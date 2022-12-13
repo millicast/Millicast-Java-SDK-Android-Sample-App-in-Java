@@ -178,7 +178,6 @@ public class Utils {
      * @param key
      * @param value
      * @param context
-     * @return
      */
     public static void setSaved(String key, String value, Context context) {
         SharedPreferences.Editor editor = getPref(context).edit();
@@ -194,7 +193,6 @@ public class Utils {
      * @param key
      * @param value
      * @param context
-     * @return
      */
     public static void setSaved(String key, boolean value, Context context) {
         SharedPreferences.Editor editor = getPref(context).edit();
@@ -210,7 +208,6 @@ public class Utils {
      * @param key
      * @param value
      * @param context
-     * @return
      */
     public static void setSaved(String key, int value, Context context) {
         SharedPreferences.Editor editor = getPref(context).edit();
