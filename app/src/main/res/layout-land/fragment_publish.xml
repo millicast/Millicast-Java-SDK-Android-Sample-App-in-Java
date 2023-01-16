@@ -31,7 +31,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/textViewPub"
+                android:id="@+id/text_Pub"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:autoSizeTextType="uniform"
@@ -42,25 +42,56 @@
                 android:id="@+id/linearLayout1"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_gravity="bottom"
                 android:layout_weight="3"
                 android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/button_refresh_pub"
+                <LinearLayout
+                    android:id="@+id/linear_layout1_1"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="0.25"
-                    android:layout_gravity="center"
-                    android:autoSizeTextType="uniform"
-                    android:text="Refresh" />
+                    android:orientation="vertical">
+
+                    <Button
+                        android:id="@+id/button_refresh_pub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_weight="1"
+                        android:autoSizeTextType="uniform"
+                        android:text="Refresh" />
+
+                    <LinearLayout
+                        android:id="@+id/linear_layout1_1_1"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_audio_only"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:autoSizeTextType="uniform"
+                            android:text="AudioOnly:" />
+
+                        <Switch
+                            android:id="@+id/switch_audio_only_pub"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/button_audio_src"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Audio" />
 
@@ -68,8 +99,8 @@
                     android:id="@+id/button_video_src"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Camera" />
 
@@ -77,8 +108,8 @@
                     android:id="@+id/buttonResolution"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Res" />
 
@@ -86,8 +117,8 @@
                     android:id="@+id/buttonCapture"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/startCapture" />
 
@@ -105,8 +136,8 @@
                     android:id="@+id/button_mirror"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Mirror" />
 
@@ -114,8 +145,8 @@
                     android:id="@+id/button_scale"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Scale" />
 
@@ -123,8 +154,8 @@
                     android:id="@+id/button_audio_pub"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteAudio" />
 
@@ -132,12 +163,13 @@
                     android:id="@+id/button_video_pub"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteVideo" />
 
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/linearLayout3"
                 android:layout_width="match_parent"
@@ -150,8 +182,8 @@
                     android:id="@+id/switchDirectionPub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:autoSizeTextType="uniform"
                     android:layout_gravity="center"
+                    android:autoSizeTextType="uniform"
                     android:text="->"
                     android:textAlignment="center" />
 
@@ -159,8 +191,8 @@
                     android:id="@+id/buttonCodecAudio"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Audio Codec" />
 
@@ -168,8 +200,8 @@
                     android:id="@+id/buttonCodecVideo"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="Video Codec" />
 
@@ -177,8 +209,8 @@
                     android:id="@+id/buttonPublish"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.25"
                     android:layout_gravity="center"
+                    android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/startPublish" />
 

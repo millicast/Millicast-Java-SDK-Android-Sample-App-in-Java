@@ -91,3 +91,4 @@ lint/tmp/
 # Others
 .DS_Store
 MillicastSDK
+deploymentTargetDropDown.xml

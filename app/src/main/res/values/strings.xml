@@ -10,6 +10,8 @@
     <string name="startCapture">Start Capture</string>
     <string name="tryCapture">Trying to Capture...</string>
     <string name="stopCapture">Stop Capture</string>
+    <string name="refreshSources">Refresh Media Sources</string>
+    <string name="refreshingSources">Refreshing Sources...</string>
     <string name="notPublishing">Not Publishing</string>
     <string name="startPublish">Start Publish</string>
     <string name="tryPublish">Trying to Publish...</string>
@@ -24,6 +26,8 @@
     <string name="noVideo">No Video</string>
     <string name="muteVideo">Mute Video</string>
     <string name="unmuteVideo">Unmute Video</string>
+    <string name="audioOnlyT">AudioOnly:T</string>
+    <string name="audioOnlyF">AudioOnly:F</string>
 
     <string name="title">Millicast Credentials</string>
     <string name="connecting">Connecting...</string>

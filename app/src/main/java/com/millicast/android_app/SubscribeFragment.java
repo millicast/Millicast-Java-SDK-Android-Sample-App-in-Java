@@ -41,7 +41,7 @@ import java.util.Optional;
 public class SubscribeFragment extends Fragment {
     public static final String TAG = "SubscribeFragment";
 
-    private final MillicastManager mcManager;
+    private final MillicastManager mcMan;
     private LinearLayout linearLayoutVideo;
     private LinearLayout linearLayoutCon;
     private TextView textViewStream;
@@ -60,10 +60,10 @@ public class SubscribeFragment extends Fragment {
     private boolean conVisible = true;
 
     public SubscribeFragment() {
-        this.mcManager = MillicastManager.getSingleInstance();
+        this.mcMan = MillicastManager.getSingleInstance();
 
         // Set this view into listeners/handlers
-        mcManager.setViewSub(this);
+        mcMan.setViewSub(this);
 
         // Set buttons again in case states changed while subListener had no access to this view.
         setUI();
@@ -107,8 +107,8 @@ public class SubscribeFragment extends Fragment {
         buttonSubscribe.setOnClickListener(this::onStartSubscribeClicked);
         buttonAudio.setOnClickListener(this::toggleAudio);
         buttonVideo.setOnClickListener(this::toggleVideo);
-        mcManager.loadViewSource(null, false);
-        mcManager.loadViewLayer();
+        mcMan.loadViewSource(null, false);
+        mcMan.loadViewSubLayer();
     }
 
     @Override
@@ -145,10 +145,10 @@ public class SubscribeFragment extends Fragment {
      * @param view
      */
     private void toggleAudio(View view) {
-        AudioTrack track = mcManager.getAudioTrackSub();
+        AudioTrack track = mcMan.getAudioTrackSub();
         if (track != null) {
-            track.setEnabled(!mcManager.isAudioEnabledSub());
-            mcManager.setAudioEnabledSub(!mcManager.isAudioEnabledSub());
+            track.setEnabled(!mcMan.isAudioEnabledSub());
+            mcMan.setAudioEnabledSub(!mcMan.isAudioEnabledSub());
             setUI();
         }
     }
@@ -159,10 +159,10 @@ public class SubscribeFragment extends Fragment {
      * @param view
      */
     private void toggleVideo(View view) {
-        VideoTrack track = mcManager.getVideoTrackSub();
+        VideoTrack track = mcMan.getVideoTrackSub();
         if (track != null) {
-            track.setEnabled(!mcManager.isVideoEnabledSub());
-            mcManager.setVideoEnabledSub(!mcManager.isVideoEnabledSub());
+            track.setEnabled(!mcMan.isVideoEnabledSub());
+            mcMan.setVideoEnabledSub(!mcMan.isVideoEnabledSub());
             setUI();
         }
     }
@@ -178,7 +178,7 @@ public class SubscribeFragment extends Fragment {
         String logTag = "[Scale][Toggle][Sub] ";
         String log = "";
         if (linearLayoutVideo != null) {
-            RendererCommon.ScalingType type = mcManager.switchScaling(ascending, false);
+            RendererCommon.ScalingType type = mcMan.switchScaling(ascending, false);
             if (type != null) {
                 log += "Switched to " + type + ".";
             } else {
@@ -198,7 +198,7 @@ public class SubscribeFragment extends Fragment {
     private void onStartSubscribeClicked(View view) {
         Log.d(TAG, "Start Subscribe clicked.");
         displaySubVideo();
-        mcManager.connectSub();
+        mcMan.connectSub();
         setUI();
     }
 
@@ -208,7 +208,7 @@ public class SubscribeFragment extends Fragment {
         // Display video if not already displayed.
         if (linearLayoutVideo.getChildCount() == 0) {
             // Get remote video renderer.
-            VideoRenderer subRenderer = mcManager.getRendererSub();
+            VideoRenderer subRenderer = mcMan.getRendererSub();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(subRenderer, TAG);
             // Finally, add our renderer to our frame layout.
@@ -221,7 +221,7 @@ public class SubscribeFragment extends Fragment {
 
     private void onStopSubscribeClicked(View view) {
         Log.d(TAG, "Stop Subscribe clicked.");
-        mcManager.stopSub();
+        mcMan.stopSub();
         Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         setUI();
     }
@@ -255,7 +255,7 @@ public class SubscribeFragment extends Fragment {
             visibility = View.GONE;
         }
         linearLayoutCon.setVisibility(visibility);
-        mcManager.applyScaling(true);
+        mcMan.applyScaling(true);
     }
 
     private void toggleAscend(CompoundButton buttonView, boolean isChecked) {
@@ -274,7 +274,7 @@ public class SubscribeFragment extends Fragment {
      * @param isInCom
      */
     private void setAudioMode(boolean isInCom) {
-        AudioManager audioManager = (AudioManager) mcManager.getMainActivity().getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) mcMan.getMainActivity().getSystemService(Context.AUDIO_SERVICE);
         int mode = MODE_IN_COMMUNICATION;
         if (!isInCom) {
             mode = MODE_NORMAL;
@@ -306,15 +306,15 @@ public class SubscribeFragment extends Fragment {
         int label;
         if (isAudio) {
             logTagLoad += "[Audio] ";
-            currentSource = mcManager.getSourceIdAudioSub();
-            source = mcManager.getSourceProjected(true);
+            currentSource = mcMan.getSourceIdAudioSub();
+            source = mcMan.getSourceProjected(true);
             spinner = spinnerSourceAudio;
             textView = textViewSourceAudio;
             label = R.string.source_audio;
         } else {
             logTagLoad += "[Video] ";
-            currentSource = mcManager.getSourceIdVideoSub();
-            source = mcManager.getSourceProjected(false);
+            currentSource = mcMan.getSourceIdVideoSub();
+            source = mcMan.getSourceProjected(false);
             spinner = spinnerSourceVideo;
             textView = textViewSourceVideo;
             label = R.string.source_video;
@@ -341,7 +341,7 @@ public class SubscribeFragment extends Fragment {
             }
         });
 
-        populateSpinner(spinnerList, spinner, lambda, mcManager.getContext(), (int position) -> {
+        populateSpinner(spinnerList, spinner, lambda, mcMan.getContext(), (int position) -> {
             String logTagSet = "[View][Source][Id][Spinner][Set]";
             String logSet;
             String sourceId = spinnerList.get(position);
@@ -354,7 +354,7 @@ public class SubscribeFragment extends Fragment {
             logD(TAG, logTagSet + logSet);
 
             // Select the source and if not possible
-            if (!mcManager.projectSource(sourceId, isAudio)) {
+            if (!mcMan.projectSource(sourceId, isAudio)) {
 
                 // Reset to currently selected source if possible.
                 logSet = "Failed! Resetting to currently selected source...";
@@ -374,7 +374,7 @@ public class SubscribeFragment extends Fragment {
                 logD(TAG, logTagSet + logSet);
 
                 String resetSelection = "";
-                mcManager.projectSource("", isAudio);
+                mcMan.projectSource("", isAudio);
                 int resetIndex = spinnerList.indexOf(resetSelection);
                 if (resetIndex > 0) {
                     spinner.setSelection(resetIndex);
@@ -404,12 +404,12 @@ public class SubscribeFragment extends Fragment {
         String logLoad;
         final Spinner spinner = spinnerLayer;
 
-        Optional<LayerData> currentLayer = mcManager.getLayerData();
-        logLoad = "Current Source:" + mcManager.getSourceIdVideoSub() + " Layer:" +
+        Optional<LayerData> currentLayer = mcMan.getLayerData();
+        logLoad = "Current Source:" + mcMan.getSourceIdVideoSub() + " Layer:" +
                 SourceInfo.getLayerStr(currentLayer, true) + ".";
         logD(TAG, logTagLoad + logLoad);
 
-        populateSpinner(spinnerList, spinner, lambda, mcManager.getContext(), (int position) -> {
+        populateSpinner(spinnerList, spinner, lambda, mcMan.getContext(), (int position) -> {
             String logTagSet = "[View][Layer][Spinner][Set] ";
             String logSet;
             String layerId = spinnerList.get(position);
@@ -417,7 +417,7 @@ public class SubscribeFragment extends Fragment {
             logD(TAG, logTagSet + logSet);
 
             // Select the layer and if not possible
-            if (!mcManager.selectLayer(layerId)) {
+            if (!mcMan.selectLayer(layerId)) {
 
                 // Reset to currently selected layerId if possible.
                 logSet = "Failed! Resetting to currently selected layerId...";
@@ -437,7 +437,7 @@ public class SubscribeFragment extends Fragment {
                 logD(TAG, logTagSet + logSet);
 
                 String resetLayerId = "";
-                mcManager.selectLayer("");
+                mcMan.selectLayer("");
                 int resetIndex = spinnerList.indexOf(resetLayerId);
                 if (resetIndex > 0) {
                     spinner.setSelection(resetIndex);
@@ -468,15 +468,15 @@ public class SubscribeFragment extends Fragment {
 
         displayCon();
 
-        textViewStream.setText("Account: " + mcManager.getAccountId(CURRENT) +
-                " Stream: " + mcManager.getStreamNameSub(CURRENT));
-        buttonScale.setText(mcManager.getScalingName(false));
+        textViewStream.setText("Account: " + mcMan.getAccountId(CURRENT) +
+                " Stream: " + mcMan.getStreamNameSub(CURRENT));
+        buttonScale.setText(mcMan.getScalingName(false));
 
-        switch (mcManager.getSubState()) {
+        switch (mcMan.getSubState()) {
             case DISCONNECTED:
                 setAudioMode(false);
-                mcManager.loadViewSource(null, false);
-                mcManager.loadViewLayer();
+                mcMan.loadViewSource(null, false);
+                mcMan.loadViewSubLayer();
                 buttonSubscribe.setText(R.string.startSubscribe);
                 buttonSubscribe.setOnClickListener(this::onStartSubscribeClicked);
                 buttonSubscribe.setEnabled(true);
@@ -501,12 +501,12 @@ public class SubscribeFragment extends Fragment {
                 buttonSubscribe.setEnabled(true);
                 buttonAudio.setEnabled(true);
                 buttonVideo.setEnabled(true);
-                if (mcManager.isAudioEnabledSub()) {
+                if (mcMan.isAudioEnabledSub()) {
                     buttonAudio.setText(R.string.muteAudio);
                 } else {
                     buttonAudio.setText(R.string.unmuteAudio);
                 }
-                if (mcManager.isVideoEnabledSub()) {
+                if (mcMan.isVideoEnabledSub()) {
                     buttonVideo.setText(R.string.muteVideo);
                 } else {
                     buttonVideo.setText(R.string.unmuteVideo);

@@ -39,7 +39,7 @@ import static com.millicast.android_app.MillicastManager.keyUrlSub;
 public class SettingsMcFragment extends Fragment {
     public static final String TAG = "SettingsMcFragment";
     Drawable backgroundOriginal;
-    private final MillicastManager mcManager;
+    private final MillicastManager mcMan;
     private Switch switchRicohTheta;
     private TextInputEditText editTextAccountId;
     private TextInputEditText editTextStreamNamePub;
@@ -67,7 +67,7 @@ public class SettingsMcFragment extends Fragment {
     private Button buttonApplySave;
 
     public SettingsMcFragment() {
-        mcManager = MillicastManager.getSingleInstance();
+        mcMan = MillicastManager.getSingleInstance();
     }
 
     @Override
@@ -86,95 +86,73 @@ public class SettingsMcFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Initialize views
         switchRicohTheta = view.findViewById(R.id.ricoh_theta_switch);
-        switchRicohTheta.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                boolean valueApplied = mcManager.isRicohTheta(CURRENT);
-                boolean hasChanged = (valueApplied != isChecked);
-                setMark(switchRicohTheta, hasChanged, changedRicohTheta);
-            }
-        });
         editTextAccountId = view.findViewById(R.id.account_id);
-        editTextAccountId.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getAccountId(CURRENT);
-        }, changedAccountId));
-
         editTextStreamNamePub = view.findViewById(R.id.stream_name_pub);
-        editTextStreamNamePub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getStreamNamePub(CURRENT);
-        }, changedStreamNamePub));
-
         editTextStreamNameSub = view.findViewById(R.id.stream_name_sub);
-        editTextStreamNameSub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getStreamNameSub(CURRENT);
-        }, changedStreamNameSub));
-
         editTextSourceIdPub = view.findViewById(R.id.source_id_pub);
-        editTextSourceIdPub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getSourceIdPub(CURRENT);
-        }, changedSourceIdPub));
-
         switchSourceIdPubEnabled = view.findViewById(R.id.source_id_pub_enabled);
-        switchSourceIdPubEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                boolean valueApplied = mcManager.isSourceIdPubEnabled(CURRENT);
-                boolean hasChanged = (valueApplied != isChecked);
-                setMark(switchSourceIdPubEnabled, hasChanged, changedSourceIdPubEnabled);
-            }
-        });
-
         editTextTokenPub = view.findViewById(R.id.publish_token);
-        editTextTokenPub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getTokenPub(CURRENT);
-        }, changedTokenPub));
-
         editTextTokenSub = view.findViewById(R.id.subscribe_token);
-        editTextTokenSub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getTokenSub(CURRENT);
-        }, changedTokenSub));
-
         editTextUrlPub = view.findViewById(R.id.publish_url);
-        editTextUrlPub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getUrlPub(CURRENT);
-        }, changedUrlPub));
-
         editTextUrlSub = view.findViewById(R.id.subscribe_url);
-        editTextUrlSub.setOnFocusChangeListener(createListener(() -> {
-            return mcManager.getUrlSub(CURRENT);
-        }, changedUrlSub));
-
         buttonLoadApplied = view.findViewById(R.id.button_applied);
         buttonLoadSaved = view.findViewById(R.id.button_saved);
         buttonLoadFile = view.findViewById(R.id.button_file);
         buttonApply = view.findViewById(R.id.button_apply);
         buttonApplySave = view.findViewById(R.id.button_apply_save);
 
-        if (savedInstanceState == null) {
-            // Will only lock if it's the first time.
-            mcManager.setCameraLock(true);
+        // Set actions
+        switchRicohTheta.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                boolean valueApplied = mcMan.isRicohTheta(CURRENT);
+                boolean hasChanged = (valueApplied != isChecked);
+                setMark(switchRicohTheta, hasChanged, changedRicohTheta);
+            }
+        });
 
-            loadProps(CURRENT);
-            // Do not consider as change for the first load.
-            changedRicohTheta.set(false);
-            changedAccountId.set(false);
-            changedStreamNamePub.set(false);
-            changedStreamNameSub.set(false);
-            changedTokenPub.set(false);
-            changedTokenSub.set(false);
-            changedUrlPub.set(false);
-            changedUrlSub.set(false);
-        } else {
-            changedRicohTheta.set(savedInstanceState.getBoolean(keyRicohTheta));
-            changedAccountId.set(savedInstanceState.getBoolean(keyAccountId));
-            changedStreamNamePub.set(savedInstanceState.getBoolean(keyStreamNamePub));
-            changedStreamNameSub.set(savedInstanceState.getBoolean(keyStreamNameSub));
-            changedTokenPub.set(savedInstanceState.getBoolean(keyTokenPub));
-            changedTokenSub.set(savedInstanceState.getBoolean(keyTokenSub));
-            changedUrlPub.set(savedInstanceState.getBoolean(keyUrlPub));
-            changedUrlSub.set(savedInstanceState.getBoolean(keyUrlSub));
-        }
+        editTextAccountId.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getAccountId(CURRENT);
+        }, changedAccountId));
+
+        editTextStreamNamePub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getStreamNamePub(CURRENT);
+        }, changedStreamNamePub));
+
+        editTextStreamNameSub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getStreamNameSub(CURRENT);
+        }, changedStreamNameSub));
+
+        editTextSourceIdPub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getSourceIdPub(CURRENT);
+        }, changedSourceIdPub));
+
+        switchSourceIdPubEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                boolean valueApplied = mcMan.isSourceIdPubEnabled(CURRENT);
+                boolean hasChanged = (valueApplied != isChecked);
+                setMark(switchSourceIdPubEnabled, hasChanged, changedSourceIdPubEnabled);
+            }
+        });
+
+        editTextTokenPub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getTokenPub(CURRENT);
+        }, changedTokenPub));
+
+        editTextTokenSub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getTokenSub(CURRENT);
+        }, changedTokenSub));
+
+        editTextUrlPub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getUrlPub(CURRENT);
+        }, changedUrlPub));
+
+        editTextUrlSub.setOnFocusChangeListener(createListener(() -> {
+            return mcMan.getUrlSub(CURRENT);
+        }, changedUrlSub));
 
         buttonLoadApplied.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -215,6 +193,31 @@ public class SettingsMcFragment extends Fragment {
                 applyProps(true);
             }
         });
+
+        if (savedInstanceState == null) {
+            // Will only lock if it's the first time.
+            mcMan.setCameraLock(true);
+
+            loadProps(CURRENT);
+            // Do not consider as change for the first load.
+            changedRicohTheta.set(false);
+            changedAccountId.set(false);
+            changedStreamNamePub.set(false);
+            changedStreamNameSub.set(false);
+            changedTokenPub.set(false);
+            changedTokenSub.set(false);
+            changedUrlPub.set(false);
+            changedUrlSub.set(false);
+        } else {
+            changedRicohTheta.set(savedInstanceState.getBoolean(keyRicohTheta));
+            changedAccountId.set(savedInstanceState.getBoolean(keyAccountId));
+            changedStreamNamePub.set(savedInstanceState.getBoolean(keyStreamNamePub));
+            changedStreamNameSub.set(savedInstanceState.getBoolean(keyStreamNameSub));
+            changedTokenPub.set(savedInstanceState.getBoolean(keyTokenPub));
+            changedTokenSub.set(savedInstanceState.getBoolean(keyTokenSub));
+            changedUrlPub.set(savedInstanceState.getBoolean(keyUrlPub));
+            changedUrlSub.set(savedInstanceState.getBoolean(keyUrlSub));
+        }
     }
 
     @Override
@@ -289,16 +292,16 @@ public class SettingsMcFragment extends Fragment {
      * @param source
      */
     private void loadProps(Source source) {
-        setMarkChange(switchRicohTheta, mcManager.isRicohTheta(CURRENT), mcManager.isRicohTheta(source), changedRicohTheta);
-        setMarkChange(editTextAccountId, mcManager.getAccountId(CURRENT), mcManager.getAccountId(source), changedAccountId);
-        setMarkChange(editTextStreamNamePub, mcManager.getStreamNamePub(CURRENT), mcManager.getStreamNamePub(source), changedStreamNamePub);
-        setMarkChange(editTextStreamNameSub, mcManager.getStreamNameSub(CURRENT), mcManager.getStreamNameSub(source), changedStreamNameSub);
-        setMarkChange(editTextSourceIdPub, mcManager.getSourceIdPub(CURRENT), mcManager.getSourceIdPub(source), changedSourceIdPub);
-        setMarkChange(switchSourceIdPubEnabled, mcManager.isSourceIdPubEnabled(CURRENT), mcManager.isSourceIdPubEnabled(source), changedSourceIdPubEnabled);
-        setMarkChange(editTextTokenPub, mcManager.getTokenPub(CURRENT), mcManager.getTokenPub(source), changedTokenPub);
-        setMarkChange(editTextTokenSub, mcManager.getTokenSub(CURRENT), mcManager.getTokenSub(source), changedTokenSub);
-        setMarkChange(editTextUrlPub, mcManager.getUrlPub(CURRENT), mcManager.getUrlPub(source), changedUrlPub);
-        setMarkChange(editTextUrlSub, mcManager.getUrlSub(CURRENT), mcManager.getUrlSub(source), changedUrlSub);
+        setMarkChange(switchRicohTheta, mcMan.isRicohTheta(CURRENT), mcMan.isRicohTheta(source), changedRicohTheta);
+        setMarkChange(editTextAccountId, mcMan.getAccountId(CURRENT), mcMan.getAccountId(source), changedAccountId);
+        setMarkChange(editTextStreamNamePub, mcMan.getStreamNamePub(CURRENT), mcMan.getStreamNamePub(source), changedStreamNamePub);
+        setMarkChange(editTextStreamNameSub, mcMan.getStreamNameSub(CURRENT), mcMan.getStreamNameSub(source), changedStreamNameSub);
+        setMarkChange(editTextSourceIdPub, mcMan.getSourceIdPub(CURRENT), mcMan.getSourceIdPub(source), changedSourceIdPub);
+        setMarkChange(switchSourceIdPubEnabled, mcMan.isSourceIdPubEnabled(CURRENT), mcMan.isSourceIdPubEnabled(source), changedSourceIdPubEnabled);
+        setMarkChange(editTextTokenPub, mcMan.getTokenPub(CURRENT), mcMan.getTokenPub(source), changedTokenPub);
+        setMarkChange(editTextTokenSub, mcMan.getTokenSub(CURRENT), mcMan.getTokenSub(source), changedTokenSub);
+        setMarkChange(editTextUrlPub, mcMan.getUrlPub(CURRENT), mcMan.getUrlPub(source), changedUrlPub);
+        setMarkChange(editTextUrlSub, mcMan.getUrlSub(CURRENT), mcMan.getUrlSub(source), changedUrlSub);
     }
 
     /**
@@ -339,15 +342,15 @@ public class SettingsMcFragment extends Fragment {
     private void applyProps(boolean save) {
         String logTag = "[Props][Apply] ";
         String logTagError = "Unable to set values as ";
-        String logTagPub = "publishing state is: " + mcManager.getPubState() + "\n";
-        String logTagSub = "subscribing state is: " + mcManager.getSubState() + "\n";
-        String logTagCap = "capturing state is: " + mcManager.getCapState() + "\n";
+        String logTagPub = "publishing state is: " + mcMan.getPubState() + "\n";
+        String logTagSub = "subscribing state is: " + mcMan.getSubState() + "\n";
+        String logTagCap = "capturing state is: " + mcMan.getCapState() + "\n";
         String logPub = "";
         String logSub = "";
         String logCap = "";
         boolean applied = false;
         if (changedAccountId.get() || save) {
-            if (!mcManager.setAccountId(editTextAccountId.getText().toString(), save)) {
+            if (!mcMan.setAccountId(editTextAccountId.getText().toString(), save)) {
                 logSub += keyAccountId + " ";
             } else {
                 applied = true;
@@ -355,7 +358,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextAccountId, false, changedAccountId);
         }
         if (changedStreamNamePub.get() || save) {
-            if (!mcManager.setStreamNamePub(editTextStreamNamePub.getText().toString(), save)) {
+            if (!mcMan.setStreamNamePub(editTextStreamNamePub.getText().toString(), save)) {
                 logPub += keyStreamNamePub + " ";
             } else {
                 applied = true;
@@ -363,7 +366,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextStreamNamePub, false, changedStreamNamePub);
         }
         if (changedStreamNameSub.get() || save) {
-            if (!mcManager.setStreamNameSub(editTextStreamNameSub.getText().toString(), save)) {
+            if (!mcMan.setStreamNameSub(editTextStreamNameSub.getText().toString(), save)) {
                 logSub += keyStreamNameSub + " ";
             } else {
                 applied = true;
@@ -371,7 +374,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextStreamNameSub, false, changedStreamNameSub);
         }
         if (changedSourceIdPub.get() || save) {
-            if (!mcManager.setSourceIdPub(editTextSourceIdPub.getText().toString(), save)) {
+            if (!mcMan.setSourceIdPub(editTextSourceIdPub.getText().toString(), save)) {
                 logPub += keySourceIdPub + " ";
             } else {
                 applied = true;
@@ -379,7 +382,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextSourceIdPub, false, changedSourceIdPub);
         }
         if (changedSourceIdPubEnabled.get() || save) {
-            if (!mcManager.setSourceIdPubEnabled(switchSourceIdPubEnabled.isChecked(), save)) {
+            if (!mcMan.setSourceIdPubEnabled(switchSourceIdPubEnabled.isChecked(), save)) {
                 logPub += keySourceIdPubEnabled + " ";
             } else {
                 applied = true;
@@ -387,7 +390,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(switchSourceIdPubEnabled, false, changedSourceIdPubEnabled);
         }
         if (changedTokenPub.get() || save) {
-            if (!mcManager.setTokenPub(editTextTokenPub.getText().toString(), save)) {
+            if (!mcMan.setTokenPub(editTextTokenPub.getText().toString(), save)) {
                 logPub += keyTokenPub + " ";
             } else {
                 applied = true;
@@ -395,7 +398,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextTokenPub, false, changedTokenPub);
         }
         if (changedTokenSub.get() || save) {
-            if (!mcManager.setTokenSub(editTextTokenSub.getText().toString(), save)) {
+            if (!mcMan.setTokenSub(editTextTokenSub.getText().toString(), save)) {
                 logSub += keyTokenSub + " ";
             } else {
                 applied = true;
@@ -403,7 +406,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextTokenSub, false, changedTokenSub);
         }
         if (changedUrlPub.get() || save) {
-            if (!mcManager.setUrlPub(editTextUrlPub.getText().toString(), save)) {
+            if (!mcMan.setUrlPub(editTextUrlPub.getText().toString(), save)) {
                 logPub += keyUrlPub + " ";
             } else {
                 applied = true;
@@ -411,7 +414,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextUrlPub, false, changedUrlPub);
         }
         if (changedUrlSub.get() || save) {
-            if (!mcManager.setUrlSub(editTextUrlSub.getText().toString(), save)) {
+            if (!mcMan.setUrlSub(editTextUrlSub.getText().toString(), save)) {
                 logSub += keyUrlSub + " ";
             } else {
                 applied = true;
@@ -419,7 +422,7 @@ public class SettingsMcFragment extends Fragment {
             setMark(editTextUrlSub, false, changedUrlSub);
         }
         if (changedRicohTheta.get() || save) {
-            if (!mcManager.setRicohTheta(switchRicohTheta.isChecked(), save)) {
+            if (!mcMan.setRicohTheta(switchRicohTheta.isChecked(), save)) {
                 logCap += keyRicohTheta;
             } else {
                 applied = true;

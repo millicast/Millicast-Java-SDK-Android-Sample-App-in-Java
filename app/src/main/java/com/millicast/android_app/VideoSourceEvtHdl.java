@@ -41,11 +41,13 @@ class VideoSourceEvtHdl implements VideoSource.EventsHandler {
     @Override
     public void onCameraOpening(String s) {
         makeSnackbar(logTag, "Camera opening... " + s, mcMan.getFragmentPub());
+
+        // Ricoh Theta specific processing to set CameraParams.
         final boolean[] paramPreviewSet = new boolean[1];
         Handler handler = new Handler();
         final double[] delaySec = {0};
 
-        Runnable runnable = new Runnable() {
+        Runnable runRicohTheta = new Runnable() {
             @Override
             public void run() {
                 paramPreviewSet[0] = mcMan.setCameraParams("RicMoviePreview3840");
@@ -70,7 +72,7 @@ class VideoSourceEvtHdl implements VideoSource.EventsHandler {
             // NOTE: If the setCameraParams were called directly
             // (instead of with a postDelayed of 0 ms), the call usually fails with error:
             // org.webrtc.Camera1Session.getParameters()' on a null object reference
-            handler.postDelayed(runnable, 0);
+            handler.postDelayed(runRicohTheta, 0);
         } else {
             // If this is a camera switch, current state would already be IS_CAPTURED.
             // Do not change states in this case.

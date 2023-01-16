@@ -32,11 +32,13 @@ import static com.millicast.android_app.Utils.makeSnackbar;
 public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
-    private final MillicastManager mcManager;
+    private final MillicastManager mcMan;
     private LinearLayout linearLayoutVideo;
     private LinearLayout linearLayoutCon;
-    private TextView textView;
+    private TextView textViewPub;
+    private TextView textViewAudioOnly;
     private Switch switchDirection;
+    private Switch switchAudioOnly;
     private Button buttonRefresh;
     private Button buttonAudioSrc;
     private Button buttonVideoSrc;
@@ -54,10 +56,10 @@ public class PublishFragment extends Fragment {
     private boolean conVisible = true;
 
     public PublishFragment() {
-        mcManager = MillicastManager.getSingleInstance();
+        mcMan = MillicastManager.getSingleInstance();
 
         // Set this view into listeners/handlers
-        mcManager.setViewPub(this);
+        mcMan.setViewPub(this);
 
         // Set buttons again in case states changed while vidSrcEvtHdl had no access to this view.
         setUI();
@@ -78,16 +80,19 @@ public class PublishFragment extends Fragment {
 
         if (savedInstanceState == null) {
             // Will only lock if it's the first time.
-            mcManager.setCameraLock(true);
+            mcMan.setCameraLock(true);
         } else {
             conVisible = savedInstanceState.getBoolean(keyConVisible);
         }
 
+        // Initialize views
         linearLayoutVideo = view.findViewById(R.id.linear_layout_video_pub);
         linearLayoutCon = view.findViewById(R.id.linear_layout_con_pub);
-        textView = view.findViewById(R.id.textViewPub);
+        textViewPub = view.findViewById(R.id.text_Pub);
+        textViewAudioOnly = view.findViewById(R.id.text_audio_only);
 
         switchDirection = view.findViewById(R.id.switchDirectionPub);
+        switchAudioOnly = view.findViewById(R.id.switch_audio_only_pub);
 
         buttonRefresh = view.findViewById(R.id.button_refresh_pub);
         buttonAudioSrc = view.findViewById(R.id.button_audio_src);
@@ -102,10 +107,12 @@ public class PublishFragment extends Fragment {
         buttonVideoCodec = view.findViewById(R.id.buttonCodecVideo);
         buttonPublish = view.findViewById(R.id.buttonPublish);
 
-        // Set static button actions
+        // Set actions
         linearLayoutVideo.setOnClickListener(this::toggleCon);
         switchDirection.setOnCheckedChangeListener(this::toggleAscend);
         switchDirection.setChecked(ascending);
+        switchAudioOnly.setOnCheckedChangeListener(this::toggleAudioOnly);
+        switchAudioOnly.setChecked(mcMan.isAudioOnly());
         buttonRefresh.setOnClickListener(this::refreshMediaSources);
         buttonAudioSrc.setOnClickListener(this::toggleAudioSrc);
         buttonVideoSrc.setOnClickListener(this::toggleVideoSrc);
@@ -153,11 +160,11 @@ public class PublishFragment extends Fragment {
      */
     private void toggleAudioSrc(View view) {
         String logTag = "[toggle][Source][Audio] ";
-        String error = mcManager.switchAudioSource(ascending);
+        String error = mcMan.switchAudioSource(ascending);
         if (error != null) {
             Utils.makeSnackbar(logTag, error, this);
         } else {
-            Utils.makeSnackbar(logTag, "OK. " + mcManager.getAudioSourceName(), this);
+            Utils.makeSnackbar(logTag, "OK. " + mcMan.getAudioSourceName(), this);
         }
         setUI();
     }
@@ -170,11 +177,11 @@ public class PublishFragment extends Fragment {
     private void toggleVideoSrc(View view) {
         String logTag = "[toggle][Source][Video] ";
         try {
-            String error = mcManager.switchVideoSource(ascending);
+            String error = mcMan.switchVideoSource(ascending);
             if (error != null) {
                 Utils.makeSnackbar(logTag, error, this);
             } else {
-                Utils.makeSnackbar(logTag, "OK. " + mcManager.getVideoSourceName(), this);
+                Utils.makeSnackbar(logTag, "OK. " + mcMan.getVideoSourceName(), this);
             }
         } catch (IllegalStateException e) {
             logD(TAG, logTag + "Only switched selected camera. " +
@@ -191,8 +198,8 @@ public class PublishFragment extends Fragment {
     private void toggleResolution(View view) {
         String logTag = "[toggle][Resolution] ";
         try {
-            mcManager.switchCapability(ascending);
-            Utils.makeSnackbar(logTag, "OK. " + mcManager.getCapabilityName(), this);
+            mcMan.switchCapability(ascending);
+            Utils.makeSnackbar(logTag, "OK. " + mcMan.getCapabilityName(), this);
         } catch (IllegalStateException e) {
             logD(TAG, logTag + "Failed! Error:" + e + "");
         }
@@ -203,14 +210,35 @@ public class PublishFragment extends Fragment {
     // Capture
     //**********************************************************************************************
 
-    void refreshMediaSources(View view) {
-        mcManager.refreshMediaLists();
+    /**
+     * Switch the AudioOnly mode on or off.
+     * In AudioOnly mode, no video will be captured.
+     * This switch can only be done when no media is currently captured.
+     *
+     * @param buttonView
+     * @param isChecked
+     */
+    private void toggleAudioOnly(CompoundButton buttonView, boolean isChecked) {
+        if (isChecked) {
+            textViewAudioOnly.setText(R.string.audioOnlyT);
+            mcMan.setAudioOnly(true);
+        } else {
+            textViewAudioOnly.setText(R.string.audioOnlyF);
+            mcMan.setAudioOnly(false);
+        }
+        setUI();
     }
 
-    void onStartCaptureClicked(View captureButton) {
+    private void refreshMediaSources(View view) {
+        // Reload the Publish view if possible after media sources are obtained.
+        mcMan.refreshMediaSourceLists();
+        setUI();
+    }
+
+    private void onStartCaptureClicked(View captureButton) {
         Log.d(TAG, "Start Capture clicked.");
         displayPubVideo();
-        mcManager.startAudioVideoCapture();
+        mcMan.startAudioVideoCapture();
         Log.d(TAG, "Started media capture.");
         Log.d(TAG, "Started display video.");
         setUI();
@@ -218,7 +246,7 @@ public class PublishFragment extends Fragment {
 
     private void onStopCaptureClicked(View view) {
         Log.d(TAG, "Stop Capture clicked.");
-        mcManager.stopAudioVideoCapture();
+        mcMan.stopAudioVideoCapture();
         Log.d(TAG, "Stopped media capture.");
         Utils.stopDisplayVideo(linearLayoutVideo, TAG);
         setUI();
@@ -234,10 +262,10 @@ public class PublishFragment extends Fragment {
      * @param view
      */
     private void toggleAudio(View view) {
-        AudioTrack track = mcManager.getAudioTrackPub();
+        AudioTrack track = mcMan.getAudioTrackPub();
         if (track != null) {
-            track.setEnabled(!mcManager.isAudioEnabledPub());
-            mcManager.setAudioEnabledPub(!mcManager.isAudioEnabledPub());
+            track.setEnabled(!mcMan.isAudioEnabledPub());
+            mcMan.setAudioEnabledPub(!mcMan.isAudioEnabledPub());
             setUI();
         }
     }
@@ -248,10 +276,10 @@ public class PublishFragment extends Fragment {
      * @param view
      */
     private void toggleVideo(View view) {
-        VideoTrack track = mcManager.getVideoTrackPub();
+        VideoTrack track = mcMan.getVideoTrackPub();
         if (track != null) {
-            track.setEnabled(!mcManager.isVideoEnabledPub());
-            mcManager.setVideoEnabledPub(!mcManager.isVideoEnabledPub());
+            track.setEnabled(!mcMan.isVideoEnabledPub());
+            mcMan.setVideoEnabledPub(!mcMan.isVideoEnabledPub());
             setUI();
         }
     }
@@ -264,7 +292,7 @@ public class PublishFragment extends Fragment {
         String tag = "[displayPubVideo] ";
         // Display video if not already displayed.
         if (linearLayoutVideo.getChildCount() == 0) {
-            VideoRenderer pubRenderer = mcManager.getRendererPub();
+            VideoRenderer pubRenderer = mcMan.getRendererPub();
             // Ensure our renderer is not attached to another parent view.
             Utils.removeFromParentView(pubRenderer, TAG);
             // Finally, add our renderer to our frame layout.
@@ -286,7 +314,7 @@ public class PublishFragment extends Fragment {
         String logTag = "[Scale][Toggle][Pub] ";
         String log = "";
         if (linearLayoutVideo != null) {
-            RendererCommon.ScalingType type = mcManager.switchScaling(ascending, true);
+            RendererCommon.ScalingType type = mcMan.switchScaling(ascending, true);
             if (type != null) {
                 log += "Switched to " + type + ".";
             } else {
@@ -306,16 +334,16 @@ public class PublishFragment extends Fragment {
         String logTag = "[Mirror][Pub] ";
         String log;
         if (linearLayoutVideo != null) {
-            mcManager.switchMirror();
+            mcMan.switchMirror();
         }
-        log = mcManager.isMirroredPub() + ".";
+        log = mcMan.isMirroredPub() + ".";
         makeSnackbar(logTag, log, this);
         setUI();
     }
 
     private void setButtonMirrorText() {
         String mirror = "Mirror:";
-        if (mcManager.isMirroredPub()) {
+        if (mcMan.isMirroredPub()) {
             mirror += "T";
         } else {
             mirror += "F";
@@ -329,13 +357,13 @@ public class PublishFragment extends Fragment {
 
     private void onStartPublishClicked(View view) {
         Log.d(TAG, "Start Publish clicked.");
-        mcManager.connectPub();
+        mcMan.connectPub();
         setUI();
     }
 
     private void onStopPublishClicked(View view) {
         Log.d(TAG, "Stop Publish clicked.");
-        mcManager.stopPub();
+        mcMan.stopPub();
         setUI();
     }
 
@@ -347,7 +375,7 @@ public class PublishFragment extends Fragment {
      */
     private void toggleCodec(View view, boolean isAudio) {
         try {
-            mcManager.switchCodec(ascending, isAudio);
+            mcMan.switchCodec(ascending, isAudio);
         } catch (IllegalStateException e) {
             logD(TAG, "[toggle][Codec] Failed! Error:" + e + "");
         }
@@ -383,7 +411,7 @@ public class PublishFragment extends Fragment {
             visibility = View.GONE;
         }
         linearLayoutCon.setVisibility(visibility);
-        mcManager.applyScaling(true);
+        mcMan.applyScaling(true);
     }
 
     /**
@@ -420,22 +448,32 @@ public class PublishFragment extends Fragment {
 
         displayCon();
 
-        textView.setText("Token: " + mcManager.getTokenPub(CURRENT) +
-                "\nStream: " + mcManager.getStreamNamePub(CURRENT));
-        buttonAudioSrc.setText(mcManager.getAudioSourceName());
-        buttonVideoSrc.setText(mcManager.getVideoSourceName());
-        buttonResolution.setText(mcManager.getCapabilityName());
-        buttonScale.setText(mcManager.getScalingName(true));
+        textViewPub.setText("Token: " + mcMan.getTokenPub(CURRENT) +
+                "\nStream: " + mcMan.getStreamNamePub(CURRENT));
+        buttonAudioSrc.setText(mcMan.getAudioSourceName());
+        buttonVideoSrc.setText(mcMan.getVideoSourceName());
+        buttonResolution.setText(mcMan.getCapabilityName());
+        buttonScale.setText(mcMan.getScalingName(true));
         setButtonMirrorText();
-        buttonAudioCodec.setText(mcManager.getCodecName(true));
-        buttonVideoCodec.setText(mcManager.getCodecName(false));
+        buttonAudioCodec.setText(mcMan.getCodecName(true));
+        buttonVideoCodec.setText(mcMan.getCodecName(false));
+
+        if (mcMan.isAudioOnly()) {
+            textViewAudioOnly.setText(R.string.audioOnlyT);
+            buttonVideoSrc.setEnabled(false);
+            buttonResolution.setEnabled(false);
+        } else {
+            textViewAudioOnly.setText(R.string.audioOnlyF);
+            buttonVideoSrc.setEnabled(true);
+            buttonResolution.setEnabled(true);
+        }
 
         boolean readyToPublish = false;
         boolean canChangeCapture = false;
-        if (mcManager.getCapState() == CaptureState.IS_CAPTURED) {
+        if (mcMan.getCapState() == CaptureState.IS_CAPTURED) {
             readyToPublish = true;
         }
-        if (mcManager.getPubState() == PublisherState.DISCONNECTED) {
+        if (mcMan.getPubState() == PublisherState.DISCONNECTED) {
             canChangeCapture = true;
         }
 
@@ -443,23 +481,39 @@ public class PublishFragment extends Fragment {
             buttonAudioSrc.setEnabled(true);
             buttonAudioCodec.setEnabled(true);
             buttonVideoCodec.setEnabled(true);
-            switch (mcManager.getCapState()) {
+            switch (mcMan.getCapState()) {
                 case NOT_CAPTURED:
                     buttonCapture.setText(R.string.startCapture);
                     buttonCapture.setOnClickListener(this::onStartCaptureClicked);
                     buttonCapture.setEnabled(true);
+                    buttonRefresh.setEnabled(true);
+                    switchAudioOnly.setEnabled(true);
                     setMuteButtons(false);
                     break;
                 case TRY_CAPTURE:
                     buttonCapture.setText(R.string.tryCapture);
                     buttonCapture.setEnabled(false);
+                    buttonRefresh.setEnabled(false);
+                    switchAudioOnly.setEnabled(false);
                     setMuteButtons(false);
                     break;
                 case IS_CAPTURED:
                     buttonCapture.setText(R.string.stopCapture);
                     buttonCapture.setOnClickListener(this::onStopCaptureClicked);
                     buttonCapture.setEnabled(true);
+                    buttonRefresh.setEnabled(false);
+                    switchAudioOnly.setEnabled(false);
                     setMuteButtons(true);
+                    break;
+                case REFRESH_SOURCE:
+                    buttonAudioSrc.setEnabled(false);
+                    buttonVideoSrc.setEnabled(false);
+                    buttonResolution.setEnabled(false);
+                    buttonCapture.setText(R.string.refreshingSources);
+                    buttonCapture.setEnabled(false);
+                    buttonRefresh.setEnabled(false);
+                    switchAudioOnly.setEnabled(false);
+                    setMuteButtons(false);
                     break;
             }
         } else {
@@ -467,17 +521,19 @@ public class PublishFragment extends Fragment {
             buttonAudioCodec.setEnabled(false);
             buttonVideoCodec.setEnabled(false);
             buttonCapture.setEnabled(false);
+            buttonRefresh.setEnabled(false);
+            switchAudioOnly.setEnabled(false);
         }
 
         if (!readyToPublish) {
-            if (PublisherState.DISCONNECTED == mcManager.getPubState()) {
+            if (PublisherState.DISCONNECTED == mcMan.getPubState()) {
                 buttonPublish.setText(R.string.notPublishing);
                 buttonPublish.setEnabled(false);
                 return;
             }
         }
 
-        switch (mcManager.getPubState()) {
+        switch (mcMan.getPubState()) {
             case DISCONNECTED:
                 buttonPublish.setText(R.string.startPublish);
                 buttonPublish.setOnClickListener(this::onStartPublishClicked);
@@ -506,12 +562,12 @@ public class PublishFragment extends Fragment {
         if (isCaptured) {
             buttonAudio.setEnabled(true);
             buttonVideo.setEnabled(true);
-            if (mcManager.isAudioEnabledPub()) {
+            if (mcMan.isAudioEnabledPub()) {
                 buttonAudio.setText(R.string.muteAudio);
             } else {
                 buttonAudio.setText(R.string.unmuteAudio);
             }
-            if (mcManager.isVideoEnabledPub()) {
+            if (mcMan.isVideoEnabledPub()) {
                 buttonVideo.setText(R.string.muteVideo);
             } else {
                 buttonVideo.setText(R.string.unmuteVideo);

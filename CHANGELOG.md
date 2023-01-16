@@ -2,6 +2,19 @@
 This file documents the release notes for each version of the Millicast Java SDK Android Sample App (SA) in Java.
 SA APIs refer to public methods provided by the SA class, MillicastManager.
 
+## 1.5.0 (2023-??-??)
+Upgraded to use SDK 1.5.0.
+### Major changes
+- Upgraded to new SDK 1.5.0.
+- Long running audio video processes such as refreshing the list of sources now run in the background.
+  - Publish and Media settings views are updated after sources refresh.
+- AudioOnly mode allows publishing with only audio.
+  - To activate or inactivate mode, simply toggle switch on Publish and Media settings views.
+### Fixed
+- N.A.
+### Known issues
+- As before.
+
 ## 1.4.2 (2022-12-13)
 Upgraded to use SDK 1.4.2, and added usage of SDK 1.4.2 bitrate settings.
 ### Major changes

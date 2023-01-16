@@ -3,6 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="app/src/main/res/layout-land/fragment_publish.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/fragment_publish.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/fragment_set_media.xml" value="0.1" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.19" />
       </map>
     </option>

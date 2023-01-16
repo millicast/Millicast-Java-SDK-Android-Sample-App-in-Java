@@ -50,13 +50,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
+        <Switch
+            android:id="@+id/switch_audio_only_setmedia"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AudioOnly:" />
+
         <Button
             android:id="@+id/button_refresh_set"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:autoSizeTextType="uniform"
-            android:text="Refresh Media Sources" />
+            android:text="@string/refreshSources" />
 
         <TextView
             android:id="@+id/publish_settings"

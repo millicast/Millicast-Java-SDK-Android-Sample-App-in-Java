@@ -1,9 +1,15 @@
 package com.millicast.android_app;
 
+import static android.os.Process.THREAD_PRIORITY_URGENT_AUDIO;
+import static android.os.Process.THREAD_PRIORITY_VIDEO;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Camera;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 import com.millicast.AudioPlayback;
@@ -68,10 +74,21 @@ public class MillicastManager {
     private Context context;
     private Activity mainActivity;
 
+    // Handler for running processes in the main thread.
+    private Handler handlerMain;
+    // Handler for running audio processes in a background thread.
+    private Handler handlerAudio;
+    private HandlerThread threadAudio;
+    // Handler for running video processes in a background thread.
+    private Handler handlerVideo;
+    private HandlerThread threadVideo;
+
     // States: Millicast
     private CaptureState capState = CaptureState.NOT_CAPTURED;
     private PublisherState pubState = PublisherState.DISCONNECTED;
     private SubscriberState subState = SubscriberState.DISCONNECTED;
+    // Set the AudioOnly state to true if not capturing video.
+    private boolean audioOnly = false;
 
     // States: Audio/Video mute.
     private boolean audioEnabledPub = false;
@@ -191,6 +208,7 @@ public class MillicastManager {
     private SubListener listenerSub;
     private PublishFragment fragmentPub;
     private SubscribeFragment fragmentSub;
+    private SettingsMediaFragment fragmentSetMedia;
 
     // Multisource objects
     // MID (Media Id) for received audio/video tracks.
@@ -215,6 +233,16 @@ public class MillicastManager {
      */
     public void init(Context context) {
         this.context = context;
+
+        // Initialize handlers.
+        handlerMain = new Handler(Looper.getMainLooper());
+        threadAudio = new HandlerThread("MC-Background-Audio", THREAD_PRIORITY_URGENT_AUDIO);
+        threadAudio.start();
+        handlerAudio = new Handler(threadAudio.getLooper());
+        threadVideo = new HandlerThread("MC-Background-Video", THREAD_PRIORITY_VIDEO);
+        threadVideo.start();
+        handlerVideo = new Handler(threadVideo.getLooper());
+
         Client.initMillicastSdk(this.context);
         // Set Logger
         Logger.setLoggerListener((String msg, LogLevel level) -> {
@@ -224,15 +252,14 @@ public class MillicastManager {
         // Prepare Media
         getMedia();
 
-        // Get media indices from stored values if present, else from default values.
-        // Set media values using indices.
-        setAudioSourceIndex(
-                Utils.getSaved(audioSourceIndexKey, audioSourceIndexDefault, context));
+        // Get the media sources in the background to avoid blocking the main thread.
+        // Subsequently, get media indices from stored values if present, else from default values.
+        // Views will be reloaded if possible after media sources are obtained.
+        refreshMediaSourceLists();
+
+        // Set other media values using indices.
         setAudioPlaybackIndex(
                 Utils.getSaved(audioPlaybackIndexKey, audioPlaybackIndexDefault, context));
-        setVideoSourceIndex(
-                Utils.getSaved(videoSourceIndexKey, videoSourceIndexDefault, context), false);
-        setCapabilityIndex(Utils.getSaved(capabilityIndexKey, capabilityIndexDefault, context));
         setCodecIndex(Utils.getSaved(audioCodecIndexKey, audioCodecIndexDefault, context), true);
         setCodecIndex(Utils.getSaved(videoCodecIndexKey, videoCodecIndexDefault, context), false);
 
@@ -604,54 +631,54 @@ public class MillicastManager {
     //**********************************************************************************************
 
     /**
-     * Get the currently available lists of audio and video sources.
+     * Refresh the currently available lists of audio and video sources if currently not capturing and no other refresh is on going.
+     * Media indices will be read from stored values if present, else from default values.
+     * Affected views (i.e., Publish and Media Settings) will be reloaded if possible after media sources are obtained.
      * This can be useful when the lists changed, for e.g. when an NDI source is added or removed.
+     * If an action is required after the source list is refreshed, provide it as a Runnable.
+     *
+     * @return True if able to proceed to refresh media sources, false otherwise.
      */
-    public void refreshMediaLists() {
-        getAudioSourceList(true);
-        getVideoSourceList(true);
+    public synchronized boolean refreshMediaSourceLists() {
+        String logTag = "[Source][List][Refresh] ";
+        if (CaptureState.NOT_CAPTURED != capState) {
+            logD(TAG, logTag + "Failed! CapState is " + capState + ".");
+            return false;
+        }
+        setCapState(CaptureState.REFRESH_SOURCE);
+
+        Runnable callbackReloadView = new Runnable() {
+            @Override
+            public void run() {
+                loadViewPub();
+                loadViewSetMedia();
+            }
+        };
+        refreshAudioSourceList(callbackReloadView);
+        refreshVideoSourceList(callbackReloadView);
+        logD(TAG, logTag + "OK. Refreshing...");
+        return true;
     }
 
     /**
-     * Get or generate (if null) the current list of AudioSources available.
+     * Get the current list of AudioSources available.
+     * If none is available, return an empty ArrayList.
      *
-     * @param refresh
      * @return
      */
-    public ArrayList<AudioSource> getAudioSourceList(boolean refresh) {
+    public ArrayList<AudioSource> getAudioSourceList() {
         String logTag = "[Source][Audio][List] ";
-        if (audioSourceList == null || refresh) {
-            logD(TAG, logTag + "Getting new audioSources.");
-            // Get new audioSources.
-            audioSourceList = getMedia().getAudioSources();
-            if (audioSourceList == null) {
-                logD(TAG, logTag + "No audioSource is available!");
-                return null;
-            }
-        } else {
-            logD(TAG, logTag + "Using existing audioSources.");
+        if (audioSourceList == null) {
+            ArrayList<AudioSource> emptyList = new ArrayList<>();
+            logD(TAG, logTag + "No audioSource is available! Using empty list.");
+            return emptyList;
         }
-
-        // Print out list of audioSources.
-        logD(TAG, logTag + "Checking for audioSources...");
-        int size = audioSourceList.size();
-        if (size < 1) {
-            logD(TAG, logTag + "No audioSource is available!");
-            return null;
-        } else {
-            String log = logTag;
-            for (int index = 0; index < size; ++index) {
-                AudioSource as = audioSourceList.get(index);
-                log += "[" + index + "]:" + getAudioSourceStr(as, true) + " ";
-            }
-            logD(TAG, log + ".");
-        }
-
+        logD(TAG, logTag + "Using existing audioSources.");
         return audioSourceList;
     }
 
     public int getAudioSourceIndex() {
-        String log = "[Source][Audio][Index] " + audioSourceIndex + ".";
+        String log = "[Source][Index][Audio] " + audioSourceIndex + ".";
         logD(TAG, log);
         return audioSourceIndex;
     }
@@ -666,7 +693,7 @@ public class MillicastManager {
      */
     public boolean setAudioSourceIndex(int newValue) {
 
-        String logTag = "[Source][Audio][Index][Set] ";
+        String logTag = "[Source][Index][Set][Audio]:" + audioSourceIndex + "->" + newValue + " ";
 
         // If currently capturing, do not set new audioSourceIndex.
         if (isAudioCaptured()) {
@@ -687,40 +714,19 @@ public class MillicastManager {
     }
 
     /**
-     * Get or generate (if null) the current list of VideoSources available.
+     * Get the current list of VideoSources available.
+     * If none is available, return an empty ArrayList.
      *
-     * @param refresh
      * @return
      */
-    public ArrayList<VideoSource> getVideoSourceList(boolean refresh) {
-        String logTag = "[Source][Video][List] ";
-        if (videoSourceList == null || refresh) {
-            logD(TAG, logTag + "Getting new videoSources.");
-            // Get new videoSources.
-            videoSourceList = getMedia().getVideoSources();
-            if (videoSourceList == null) {
-                logD(TAG, logTag + "No videoSource is available!");
-                return null;
-            }
-        } else {
-            logD(TAG, logTag + "Using existing videoSources.");
+    public ArrayList<VideoSource> getVideoSourceList() {
+        String logTag = "[Source][List][Video] ";
+        if (videoSourceList == null) {
+            ArrayList<VideoSource> emptyList = new ArrayList<>();
+            logD(TAG, logTag + "No videoSource is available! Using empty list.");
+            return emptyList;
         }
-
-        // Print out list of videoSources.
-        logD(TAG, logTag + "Checking for videoSources...");
-        int size = videoSourceList.size();
-        if (size < 1) {
-            logD(TAG, logTag + "No videoSource is available!");
-            return null;
-        } else {
-            String log = logTag;
-            for (int index = 0; index < size; ++index) {
-                VideoSource vs = videoSourceList.get(index);
-                log += "[" + index + "]:" + getVideoSourceStr(vs, true) + " ";
-            }
-            logD(TAG, log + ".");
-        }
-
+        logD(TAG, logTag + "Using existing videoSources.");
         return videoSourceList;
     }
 
@@ -743,10 +749,10 @@ public class MillicastManager {
      */
     public String setVideoSourceIndex(int newValue, boolean setCapIndex) {
 
-        String logTag = "[Source][Video][Index][Set] ";
+        String logTag = "[Source][Video][Index][Set]:" + videoSourceIndex + "->" + newValue + " ";
 
         // If capturing, do not allow changing to and from NDI.
-        String error = getErrorSwitchNdi(newValue, videoSource, getVideoSourceList(false));
+        String error = getErrorSwitchNdi(newValue, videoSource, videoSourceList);
         if (error != null) {
             logD(TAG, logTag + error);
             return error;
@@ -775,10 +781,18 @@ public class MillicastManager {
 
     /**
      * Get the current list of VideoCapabilities available.
+     * If none is available, return an empty ArrayList.
      *
      * @return
      */
     public ArrayList<VideoCapabilities> getCapabilityList() {
+        String logTag = "[Source][Capability][List] ";
+        if (capabilityList == null) {
+            ArrayList<VideoCapabilities> emptyList = new ArrayList<>();
+            logD(TAG, logTag + "No capability is available! Using empty list.");
+            return emptyList;
+        }
+        logD(TAG, logTag + "Using existing capability list.");
         return capabilityList;
     }
 
@@ -849,7 +863,13 @@ public class MillicastManager {
             return error;
         }
 
-        newValue = audioSourceIndexNext(ascending, audioSourceIndex, getAudioSourceList(false).size());
+        if (audioSourceList == null) {
+            error = "Failed! No audio source exists.";
+            logD(TAG, logTag + error);
+            return error;
+        }
+
+        newValue = audioSourceIndexNext(ascending, audioSourceIndex, audioSourceList.size());
         if (newValue == null) {
             error = "FAILED! Unable to get next audioSource!";
             logD(TAG, logTag + error);
@@ -882,7 +902,7 @@ public class MillicastManager {
 
         // If capturing with NDI, do not allow changing.
         // Check using current videoSourceIndex.
-        String error = getErrorSwitchNdi(videoSourceIndex, videoSource, getVideoSourceList(false));
+        String error = getErrorSwitchNdi(videoSourceIndex, videoSource, videoSourceList);
         if (error != null) {
             logD(TAG, logTag + error);
             return error;
@@ -891,9 +911,13 @@ public class MillicastManager {
         Integer newValue = null;
         // If videoSource is already capturing, switch to only non-NDI videoSource.
         if (isVideoCaptured()) {
-            newValue = videoSourceIndexNextNonNdi(ascending, videoSourceIndex, getVideoSourceList(false));
+            newValue = videoSourceIndexNextNonNdi(ascending, videoSourceIndex, videoSourceList);
         } else {
-            newValue = videoSourceIndexNext(ascending, videoSourceIndex, getVideoSourceList(false).size());
+            int size = 0;
+            if (videoSourceList != null) {
+                size = getVideoSourceList().size();
+            }
+            newValue = videoSourceIndexNext(ascending, videoSourceIndex, size);
         }
         if (newValue == null) {
             error = "FAILED! Unable to get next camera!";
@@ -942,12 +966,43 @@ public class MillicastManager {
     //**********************************************************************************************
 
     /**
-     * Start capturing both audio and video (based on selected videoSource).
+     * Checks if we are in AudioOnly mode, i.e. video is not captured.
+     *
+     * @return
      */
-    public void startAudioVideoCapture() {
-        logD(TAG, "[Capture][Audio][Video][Start] Starting Capture...");
+    public boolean isAudioOnly() {
+        return audioOnly;
+    }
+
+    /**
+     * Sets AudioOnly mode as desired. In AudioOnly mode, video is not captured.
+     *
+     * @param audioOnly True to turn on AudioOnly mode, false otherwise.
+     */
+    public void setAudioOnly(boolean audioOnly) {
+        this.audioOnly = audioOnly;
+    }
+
+    /**
+     * Start capturing both audio and video (based on selected videoSource) if currently not capturing and no media sources refresh is on going.
+     *
+     * @return True if able to proceed to start audio video capture, false otherwise.
+     */
+    public synchronized boolean startAudioVideoCapture() {
+        String logTag = "[Capture][Audio][Video][Start] ";
+
+        if (CaptureState.NOT_CAPTURED != capState) {
+            logD(TAG, logTag + "Failed! CapState is " + capState + ".");
+            return false;
+        }
+
+        logD(TAG, logTag + "Starting Capture...");
+        setCapState(CaptureState.TRY_CAPTURE);
+
         startCaptureVideo();
         startCaptureAudio();
+        logD(TAG, logTag + "OK.");
+        return true;
     }
 
     /**
@@ -1707,6 +1762,17 @@ public class MillicastManager {
         fragmentPub = view;
         logD(TAG, logTag + "OK.");
     }
+
+    /**
+     * Keep a reference to the SettingsMediaFragment View in the {@link MillicastManager}.
+     *
+     * @param view
+     */
+    public void setViewSetMedia(SettingsMediaFragment view) {
+        String logTag = "[SetMedia][View][set] ";
+        fragmentSetMedia = view;
+        logD(TAG, logTag + "OK.");
+    }
     //**********************************************************************************************
     // Subscribe
     //**********************************************************************************************
@@ -1961,7 +2027,7 @@ public class MillicastManager {
                 log += "Setting new Layers of the project source in the view...";
                 logD(TAG, logTag + log);
                 // Reset the Layers UI in the view.
-                loadViewLayer();
+                loadViewSubLayer();
             }
         } else {
             log = "Failed!";
@@ -2041,7 +2107,7 @@ public class MillicastManager {
                 log += " No remaining video source to project. Reloading layer view...";
                 logD(TAG, logTag + log);
                 // Reload layer view.
-                loadViewLayer();
+                loadViewSubLayer();
             } else {
                 newSid = (String) (sourceMap.keySet().toArray())[0];
                 log += " Trying to project another video source: " + newSid + "...";
@@ -2124,7 +2190,7 @@ public class MillicastManager {
         if (source.setLayerActiveList(layerActiveList)) {
             logD(TAG, logTag + "OK.");
             // Reset the Layers UI in the view.
-            loadViewLayer();
+            loadViewSubLayer();
             return true;
         } else {
             logD(TAG, logTag + "OK. This list already exists.");
@@ -2248,10 +2314,40 @@ public class MillicastManager {
     }
 
     /**
-     * Load the Layer UI in the view when the list of active sources change.
+     * Load the UI on the main thread in the Publish view if the view exists.
      */
-    public void loadViewLayer() {
-        String logTag = "[View][Layer][Load] ";
+    public void loadViewPub() {
+        handlerMain.post(() -> {
+            String logTag = "[View][Load][Pub] ";
+            if (fragmentPub == null) {
+                logD(TAG, logTag + "Failed! The PublishFragment does not exist.");
+                return;
+            }
+            fragmentPub.setUI();
+            logD(TAG, logTag + "OK.");
+        });
+    }
+
+    /**
+     * Load the UI on the main thread in the SettingsMediaFragment view if the view exists.
+     */
+    public void loadViewSetMedia() {
+        handlerMain.post(() -> {
+            String logTag = "[View][Load][SetMedia] ";
+            if (fragmentSetMedia == null) {
+                logD(TAG, logTag + "Failed! The SettingsMediaFragment does not exist.");
+                return;
+            }
+            fragmentSetMedia.setUI();
+            logD(TAG, logTag + "OK.");
+        });
+    }
+
+    /**
+     * Load the Layer UI in the Subscribe view when the list of active remote sources change.
+     */
+    public void loadViewSubLayer() {
+        String logTag = "[View][Load][Sub][Layer] ";
         if (fragmentSub == null) {
             logD(TAG, logTag + "Failed! The SubscribeFragment does not exist.");
             return;
@@ -2478,7 +2574,6 @@ public class MillicastManager {
 
     /**
      * Relock the camera if it was unlocked when changing App.
-     *
      */
     public void restoreCameraLock() {
         if (toRelockCamera) {
@@ -2490,7 +2585,6 @@ public class MillicastManager {
     /**
      * Record if camera should be restored when SA resumes.
      * Call only when SA stops.
-     *
      */
     public void flagCameraRestore() {
         if (isCameraLocked) {
@@ -2544,6 +2638,8 @@ public class MillicastManager {
         logD(TAG, logTag + "Publisher view removed.");
         fragmentSub = null;
         logD(TAG, logTag + "Subscriber view removed.");
+        fragmentSetMedia = null;
+        logD(TAG, logTag + "Media Settings view removed.");
     }
 
     public void release() {
@@ -2589,6 +2685,10 @@ public class MillicastManager {
         videoSourceList = null;
         Log.d(logTag, "VideoSources removed.");
 
+        threadAudio.quitSafely();
+        threadVideo.quitSafely();
+        Log.d(logTag, "Threads Loopers quitted.");
+
         Log.d(logTag, "All released.");
     }
 
@@ -2620,6 +2720,68 @@ public class MillicastManager {
     }
 
     /**
+     * Refresh the current list of AudioSources available in a background thread.
+     * If none is available, return an empty ArrayList.
+     * Audio source index will be read from stored value if present, else from default value.
+     * If an action is required after the source list is refreshed, provide it as a Runnable.
+     *
+     * @param callback Runnable for action required after source list is refreshed.
+     *                 Null if none is required.
+     * @return
+     */
+    private void refreshAudioSourceList(Runnable callback) {
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                CaptureState.refreshAudio = true;
+                String logTag = "[Source][List][Refresh][Audio] ";
+
+                logD(TAG, logTag + "Getting new audioSources.");
+                // Get new audioSources.
+                audioSourceList = getMedia().getAudioSources();
+
+                // Print out list of audioSources.
+                logD(TAG, logTag + "Checking for audioSources...");
+                if (audioSourceList == null || audioSourceList.size() < 1) {
+                    logD(TAG, logTag + "No audioSource is available!");
+                } else {
+                    // Print out new sourceList.
+                    String log = logTag;
+                    for (int index = 0; index < audioSourceList.size(); ++index) {
+                        AudioSource as = audioSourceList.get(index);
+                        log += "[" + index + "]:" + getAudioSourceStr(as, true) + " ";
+                    }
+                    logD(TAG, log + ".");
+
+                    // Set currently selected source.
+                    logD(TAG, "Setting currently selected source.");
+                    setAudioSourceIndex(
+                            Utils.getSaved(audioSourceIndexKey, audioSourceIndexDefault, context));
+                }
+
+                // Run callback, if any.
+                if (callback == null) {
+                    return;
+                }
+
+                logD(TAG, "Running provided callback...");
+                callback.run();
+
+                // Reset CapState if possible.
+                CaptureState.refreshAudio = false;
+                if (CaptureState.refreshVideo) {
+                    logD(TAG, logTag + "Unable to reset CapState as video sources are still being refreshed.");
+                } else {
+                    setCapState(CaptureState.NOT_CAPTURED);
+                    logD(TAG, logTag + "CapState reset to NOT_CAPTURED.");
+                }
+                logD(TAG, "OK.");
+            }
+        };
+        handlerAudio.post(task);
+    }
+
+    /**
      * Return the current audioSource.
      */
     private AudioSource getAudioSource() {
@@ -2636,7 +2798,7 @@ public class MillicastManager {
 
     /**
      * Set the audioSource at the audioSourceIndex of the current audioSourceList
-     * as the current audioSource, unless currently capturing.
+     * as the current audioSource.
      */
     private void setAudioSource() {
         String logTag = "[Source][Audio][Set] ";
@@ -2644,11 +2806,11 @@ public class MillicastManager {
         // Create new audioSource based on index.
         AudioSource audioSourceNew;
 
-        getAudioSourceList(false);
         if (audioSourceList == null) {
-            logD(TAG, logTag + "Failed as no valid audioSource was available!");
+            logD(TAG, logTag + "Failed! No audio source exists.");
             return;
         }
+
         int size = audioSourceList.size();
         if (size < 1) {
             logD(TAG, logTag + "Failed as list size was " + size + "!");
@@ -2685,6 +2847,68 @@ public class MillicastManager {
         logD(TAG, logTag + "New at index:" +
                 audioSourceIndex + " is: " + log + ".");
 
+    }
+
+    /**
+     * Refresh the current list of AudioSources available in a background thread.
+     * If none is available, return an empty ArrayList.
+     * Video source index will be read from stored value if present, else from default value.
+     * If an action is required after the source list is refreshed, provide it as a Runnable.
+     *
+     * @param callback Runnable for action required after source list is refreshed.
+     *                 Null if none is required.
+     * @return
+     */
+    private void refreshVideoSourceList(Runnable callback) {
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                CaptureState.refreshVideo = true;
+                String logTag = "[Source][List][Refresh][Video] ";
+
+                logD(TAG, logTag + "Getting new videoSources.");
+                // Get new videoSources.
+                videoSourceList = getMedia().getVideoSources();
+
+                // Print out list of videoSources.
+                logD(TAG, logTag + "Checking for videoSources...");
+                if (videoSourceList == null || videoSourceList.size() < 1) {
+                    logD(TAG, logTag + "No videoSource is available!");
+                } else {
+                    String log = logTag;
+                    for (int index = 0; index < videoSourceList.size(); ++index) {
+                        VideoSource vs = videoSourceList.get(index);
+                        log += "[" + index + "]:" + getVideoSourceStr(vs, true) + " ";
+                    }
+                    logD(TAG, log + ".");
+
+                    // Set currently selected source.
+                    logD(TAG, logTag + "Setting currently selected source and capability.");
+                    setVideoSourceIndex(
+                            Utils.getSaved(videoSourceIndexKey, videoSourceIndexDefault, context), false);
+                    setCapabilityIndex(Utils.getSaved(capabilityIndexKey, capabilityIndexDefault, context));
+                }
+
+                // Run callback, if any.
+                if (callback == null) {
+                    return;
+                }
+
+                logD(TAG, "Running provided callback...");
+                callback.run();
+
+                // Reset CapState if possible.
+                CaptureState.refreshVideo = false;
+                if (CaptureState.refreshAudio) {
+                    logD(TAG, logTag + "Unable to reset CapState as Audio sources are still being refreshed.");
+                } else {
+                    setCapState(CaptureState.NOT_CAPTURED);
+                    logD(TAG, logTag + "CapState reset to NOT_CAPTURED.");
+                }
+                logD(TAG, "OK.");
+            }
+        };
+        handlerVideo.post(task);
     }
 
     /**
@@ -2728,12 +2952,12 @@ public class MillicastManager {
         // Create new videoSource based on index.
         VideoSource videoSourceNew;
 
-        if (getVideoSourceList(false) == null) {
+        if (videoSourceList == null) {
             logD(TAG, logTag + "Failed as no valid videoSource was available!");
             return;
         }
 
-        int size = getVideoSourceList(false).size();
+        int size = videoSourceList.size();
         if (size < 1) {
             logD(TAG, logTag + "Failed as list size was " + size + "!");
             return;
@@ -2753,7 +2977,7 @@ public class MillicastManager {
             return;
         }
 
-        videoSourceNew = getVideoSourceList(false).get(videoSourceIndex);
+        videoSourceNew = videoSourceList.get(videoSourceIndex);
 
         String log;
         if (videoSourceNew != null) {
@@ -2804,7 +3028,6 @@ public class MillicastManager {
      * The active videoSource is selected as the first non-null value (or null if none is available)
      * in the following list:
      * videoSourceSwitched, videoSource.
-     *
      */
     private void setCapabilityList() {
         String logTag = "[Capability][List][Set] ";
@@ -2817,7 +3040,11 @@ public class MillicastManager {
         } else if (videoSource != null) {
             vs = videoSource;
             log += "From videoSource.";
+        } else {
+            logD(TAG, logTag + "Failed! No videoSource is available.");
+            return;
         }
+
         capabilityList = vs.getCapabilities();
         logD(TAG, log);
 
@@ -2955,7 +3182,8 @@ public class MillicastManager {
      * @param videoSourceList
      * @return
      */
-    private Integer videoSourceIndexNextNonNdi(boolean ascending, int curIndex, ArrayList<VideoSource> videoSourceList) {
+    private Integer videoSourceIndexNextNonNdi(boolean ascending, int curIndex, ArrayList<
+            VideoSource> videoSourceList) {
         String logTag = "[Source][Index][Next][Video][Non][Ndi] ";
         if (videoSourceList == null) {
             logD(TAG, logTag + "Failed! VideoSources not created!");
@@ -3019,9 +3247,14 @@ public class MillicastManager {
      * @return null if it is possible to switch directly to the new videoSource,
      * else return the error message.
      */
-    private String getErrorSwitchNdi(int newIndex, VideoSource videoSource, ArrayList<VideoSource> videoSourceList) {
+    private String getErrorSwitchNdi(int newIndex, VideoSource
+            videoSource, ArrayList<VideoSource> videoSourceList) {
         String logTag = "[Error][Ndi] ";
         String log = null;
+        if (videoSourceList == null) {
+            log = "No video source exists!";
+            return log;
+        }
         if (isVideoCaptured()) {
             String error1 = "Failed! Unable to switch capture ";
             String error2 = " NDI directly. Please stop (if) publishing, stop capturing, " +
@@ -3060,6 +3293,12 @@ public class MillicastManager {
         }
         audioTrackPub = (AudioTrack) audioSource.startCapture();
         setAudioEnabledPub(true);
+
+        // Set capState if video is not captured.
+        if (videoSource == null || audioOnly) {
+            setCapState(CaptureState.IS_CAPTURED);
+            logD(TAG, logTag + "Set CapState to " + capState + " as video is not captured.");
+        }
         logD(TAG, logTag + "OK");
     }
 
@@ -3077,6 +3316,13 @@ public class MillicastManager {
         logD(TAG, logTag + "Audio captured stopped.");
         setAudioEnabledPub(false);
         audioTrackPub = null;
+
+        // Set capState if video is not captured.
+        if (videoSource == null || audioOnly) {
+            setCapState(CaptureState.NOT_CAPTURED);
+            logD(TAG, logTag + "Set CapState to " + capState + " as video is not captured.");
+        }
+        logD(TAG, logTag + "OK");
     }
 
     /**
@@ -3106,17 +3352,17 @@ public class MillicastManager {
      */
     private void startCaptureVideo() {
         String logTag = "[Capture][Video][Start] ";
-        if (isVideoCaptured()) {
-            String log = logTag + "VideoSource is already capturing!";
-            if (capState == CaptureState.NOT_CAPTURED) {
-                logD(TAG, log + " Continuing as capState is " + capState + ".");
-            } else {
-                logD(TAG, log + " NOT continuing as capState is " + capState + ".");
-                return;
-            }
+
+        if (isAudioOnly()) {
+            logD(TAG, logTag + " NOT continuing as we are in AudioOnly mode.");
+            return;
         }
 
-        setCapState(CaptureState.TRY_CAPTURE);
+        if (isVideoCaptured()) {
+            String log = logTag + "VideoSource is already capturing!";
+            logD(TAG, log + " NOT continuing as capState is " + capState + ".");
+            return;
+        }
 
         if (videoSource == null) {
             setCapState(CaptureState.NOT_CAPTURED);
@@ -3137,12 +3383,14 @@ public class MillicastManager {
         VideoTrack videoTrack = (VideoTrack) videoSource.startCapture();
 
         if (videoSource.getType() == NDI) {
-            this.setCapState(CaptureState.IS_CAPTURED);
+            setCapState(CaptureState.IS_CAPTURED);
+            logD(TAG, logTag + "Set CapState to " + capState + " as video is NDI.");
         } else {
             mirrorFrontCamera();
         }
 
         setRenderVideoTrackPub(videoTrack);
+        logD(TAG, logTag + "OK");
     }
 
     /**
@@ -3166,6 +3414,8 @@ public class MillicastManager {
         setVideoEnabledPub(false);
         videoTrackPub = null;
         setCapState(CaptureState.NOT_CAPTURED);
+        logD(TAG, logTag + "Set CapState to " + capState + ".");
+        logD(TAG, logTag + "OK");
     }
 
     /**
