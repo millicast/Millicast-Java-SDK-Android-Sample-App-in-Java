@@ -458,16 +458,6 @@ public class PublishFragment extends Fragment {
         buttonAudioCodec.setText(mcMan.getCodecName(true));
         buttonVideoCodec.setText(mcMan.getCodecName(false));
 
-        if (mcMan.isAudioOnly()) {
-            textViewAudioOnly.setText(R.string.audioOnlyT);
-            buttonVideoSrc.setEnabled(false);
-            buttonResolution.setEnabled(false);
-        } else {
-            textViewAudioOnly.setText(R.string.audioOnlyF);
-            buttonVideoSrc.setEnabled(true);
-            buttonResolution.setEnabled(true);
-        }
-
         boolean readyToPublish = false;
         boolean canChangeCapture = false;
         if (mcMan.getCapState() == CaptureState.IS_CAPTURED) {
@@ -480,7 +470,9 @@ public class PublishFragment extends Fragment {
         if (canChangeCapture) {
             buttonAudioSrc.setEnabled(true);
             buttonAudioCodec.setEnabled(true);
+            buttonVideoSrc.setEnabled(true);
             buttonVideoCodec.setEnabled(true);
+            buttonResolution.setEnabled(true);
             switch (mcMan.getCapState()) {
                 case NOT_CAPTURED:
                     buttonCapture.setText(R.string.startCapture);
@@ -519,10 +511,22 @@ public class PublishFragment extends Fragment {
         } else {
             buttonAudioSrc.setEnabled(false);
             buttonAudioCodec.setEnabled(false);
+            buttonVideoSrc.setEnabled(false);
             buttonVideoCodec.setEnabled(false);
+            buttonResolution.setEnabled(false);
             buttonCapture.setEnabled(false);
             buttonRefresh.setEnabled(false);
             switchAudioOnly.setEnabled(false);
+        }
+
+        // Adjust for AudioOnly mode.
+        if (mcMan.isAudioOnly()) {
+            textViewAudioOnly.setText(R.string.audioOnlyT);
+            buttonVideoSrc.setEnabled(false);
+            buttonResolution.setEnabled(false);
+            buttonVideoCodec.setEnabled(false);
+        } else {
+            textViewAudioOnly.setText(R.string.audioOnlyF);
         }
 
         if (!readyToPublish) {
@@ -561,7 +565,6 @@ public class PublishFragment extends Fragment {
     private void setMuteButtons(boolean isCaptured) {
         if (isCaptured) {
             buttonAudio.setEnabled(true);
-            buttonVideo.setEnabled(true);
             if (mcMan.isAudioEnabledPub()) {
                 buttonAudio.setText(R.string.muteAudio);
             } else {
@@ -571,6 +574,12 @@ public class PublishFragment extends Fragment {
                 buttonVideo.setText(R.string.muteVideo);
             } else {
                 buttonVideo.setText(R.string.unmuteVideo);
+            }
+            if (mcMan.isAudioOnly()) {
+                buttonVideo.setEnabled(false);
+                buttonVideo.setText(R.string.noVideo);
+            } else {
+                buttonVideo.setEnabled(true);
             }
         } else {
             buttonAudio.setEnabled(false);

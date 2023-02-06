@@ -5,11 +5,12 @@ SA APIs refer to public methods provided by the SA class, MillicastManager.
 ## 1.5.0 (2023-??-??)
 Upgraded to use SDK 1.5.0.
 ### Major changes
-- Upgraded to new SDK 1.5.0.
+- Upgraded to new SDK 1.5.0, changed source refresh to execute in background, and added AudioOnly publishing.
 - Long running audio video processes such as refreshing the list of sources now run in the background.
   - Publish and Media settings views are updated after sources refresh.
 - AudioOnly mode allows publishing with only audio.
   - To activate or inactivate mode, simply toggle switch on Publish and Media settings views.
+  - Devices with only audio source(s) and no video source will automatically be able to publish with only audio regardless of the state of this mode.
 ### Fixed
 - N.A.
 ### Known issues

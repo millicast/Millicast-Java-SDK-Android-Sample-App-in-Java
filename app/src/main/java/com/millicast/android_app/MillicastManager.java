@@ -3282,17 +3282,19 @@ public class MillicastManager {
      * Using the selected audioSource, capture audio into a pubAudioTrack.
      */
     private void startCaptureAudio() {
-        String logTag = "[Capture][Audio][Start] ";
+        String logTag = "[Audio][Capture][Start] ";
         if (isAudioCaptured()) {
-            logD(TAG, logTag + "AudioSource is already capturing!");
+            logD(TAG, logTag + "Source is already capturing!");
             return;
         }
         if (audioSource == null) {
-            logD(TAG, logTag + "Failed as unable to get valid audioSource!");
+            logD(TAG, logTag + "Failed! Source does not exists.");
             return;
         }
-        audioTrackPub = (AudioTrack) audioSource.startCapture();
-        setAudioEnabledPub(true);
+
+        // Capture AudioTrack for publishing.
+        AudioTrack track = (AudioTrack) audioSource.startCapture();
+        renderAudioPub(track);
 
         // Set capState if video is not captured.
         if (videoSource == null || audioOnly) {
@@ -3306,16 +3308,21 @@ public class MillicastManager {
      * Stop capturing audio, if audio is being captured.
      */
     private void stopCaptureAudio() {
-        String logTag = "[Capture][Stop][Audio] ";
+        String logTag = "[Audio][Capture][Stop] ";
         if (!isAudioCaptured()) {
-            logD(TAG, logTag + "Not stopping as audio is not captured!");
+            logD(TAG, logTag + "Not stopping as not captured!");
             return;
         }
 
         removeAudioSource();
         logD(TAG, logTag + "Audio captured stopped.");
         setAudioEnabledPub(false);
-        audioTrackPub = null;
+
+        // Remove Track.
+        if (audioTrackPub != null) {
+            audioTrackPub = null;
+            logD(TAG, logTag + "Track removed.");
+        }
 
         // Set capState if video is not captured.
         if (videoSource == null || audioOnly) {
@@ -3332,7 +3339,7 @@ public class MillicastManager {
      * based on audioSourceIndex.
      */
     private void removeAudioSource() {
-        String logTag = "[Source][Audio][Remove] ";
+        String logTag = "[Audio][Source][Remove] ";
 
         // Remove audioSource
         if (isAudioCaptured()) {
@@ -3351,7 +3358,7 @@ public class MillicastManager {
      * Using the selected videoSource and capability, capture video into a video track for publishing.
      */
     private void startCaptureVideo() {
-        String logTag = "[Capture][Video][Start] ";
+        String logTag = "[Video][Capture][Start] ";
 
         if (isAudioOnly()) {
             logD(TAG, logTag + " NOT continuing as we are in AudioOnly mode.");
@@ -3359,7 +3366,7 @@ public class MillicastManager {
         }
 
         if (isVideoCaptured()) {
-            String log = logTag + "VideoSource is already capturing!";
+            String log = logTag + "Source is already capturing!";
             logD(TAG, log + " NOT continuing as capState is " + capState + ".");
             return;
         }
@@ -3397,7 +3404,7 @@ public class MillicastManager {
      * Stop capturing video, if video is being captured.
      */
     private void stopCaptureVideo() {
-        String logTag = "[Capture][Video][Stop] ";
+        String logTag = "[Video][Capture][Stop] ";
         if (!isVideoCaptured()) {
             logD(TAG, logTag + "Not stopping as video is not captured!");
             return;
@@ -3425,7 +3432,7 @@ public class MillicastManager {
      * based on videoSourceIndex and capabilityIndex.
      */
     private void removeVideoSource() {
-        String logTag = "[Source][Video][Remove] ";
+        String logTag = "[Video][Source][Remove] ";
 
         // Remove all videoSource
         if (isVideoCaptured()) {
@@ -3576,6 +3583,19 @@ public class MillicastManager {
         logD(TAG, logTag + "OK. Playback initiated.");
     }
 
+    /**
+     * Process the local audio.
+     */
+    private void renderAudioPub(AudioTrack track) {
+        String logTag = "[Pub][Render][Audio] ";
+        if (track == null) {
+            logD(TAG, logTag + "Failed! audioTrack does not exist.");
+            return;
+        }
+        audioTrackPub = track;
+        setAudioEnabledPub(true);
+        logD(TAG, logTag + "OK");
+    }
     //**********************************************************************************************
     // Render - Video
     //**********************************************************************************************
