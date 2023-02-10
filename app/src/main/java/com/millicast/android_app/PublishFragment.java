@@ -1,6 +1,8 @@
 package com.millicast.android_app;
 
+import android.Manifest;
 import android.os.Bundle;
+import android.content.pm.PackageManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,9 +12,13 @@ import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.millicast.AudioTrack;
 import com.millicast.VideoRenderer;
@@ -54,6 +60,21 @@ public class PublishFragment extends Fragment {
 
     private boolean ascending = true;
     private boolean conVisible = true;
+
+    private final ActivityResultLauncher<String[]> cameraMicPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                int cameraResult = result.get(Manifest.permission.CAMERA) ? PackageManager.PERMISSION_GRANTED : PackageManager.PERMISSION_DENIED;
+                int audioResult = result.get(Manifest.permission.RECORD_AUDIO) ? PackageManager.PERMISSION_GRANTED : PackageManager.PERMISSION_DENIED;
+                if (cameraResult == PackageManager.PERMISSION_GRANTED && audioResult == PackageManager.PERMISSION_GRANTED) {
+                    // Permission is granted, continue with the code
+                    Log.d(TAG, "Camera and microphone access given.");
+                    onStartCaptureClickedApproved();
+                } else {
+                    // Permission is not granted, show a pop-up message
+                    Log.d(TAG, "Failed to get camera and microphone access.");
+                    Toast.makeText(getContext(), "Camera and microphone permissions are required for publishing", Toast.LENGTH_LONG).show();
+                }
+            });
 
     public PublishFragment() {
         mcMan = MillicastManager.getSingleInstance();
@@ -237,6 +258,21 @@ public class PublishFragment extends Fragment {
 
     private void onStartCaptureClicked(View captureButton) {
         Log.d(TAG, "Start Capture clicked.");
+        // Check if camera and microphone permissions are already granted
+        if (!hasCameraAndMicrophonePermissions()) {
+            // Request camera and microphone permissions
+            cameraMicPermissionLauncher.launch(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO});
+        } else {
+            onStartCaptureClickedApproved();
+        }
+    }
+
+    private boolean hasCameraAndMicrophonePermissions() {
+        return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void onStartCaptureClickedApproved() {
         displayPubVideo();
         mcMan.startAudioVideoCapture();
         Log.d(TAG, "Started media capture.");

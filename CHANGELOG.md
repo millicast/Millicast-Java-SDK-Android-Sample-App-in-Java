@@ -12,7 +12,7 @@ Upgraded to use SDK 1.5.0.
   - To activate or inactivate mode, simply toggle switch on Publish and Media settings views.
   - Devices with only audio source(s) and no video source will automatically be able to publish with only audio regardless of the state of this mode.
 ### Fixed
-- N.A.
+- Now when trying to capture, it asks for camera and microphone permissions instead of crashing the app.
 ### Known issues
 - As before.
 
