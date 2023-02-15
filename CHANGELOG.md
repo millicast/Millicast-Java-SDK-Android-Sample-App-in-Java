@@ -3,16 +3,17 @@ This file documents the release notes for each version of the Millicast Java SDK
 SA APIs refer to public methods provided by the SA class, MillicastManager.
 
 ## 1.5.0 (2023-??-??)
-Upgraded to use SDK 1.5.0.
+Upgraded to use SDK 1.5.0, changed source refresh to execute in background, added AudioOnly publishing, and fixed permission related crash.
 ### Major changes
-- Upgraded to new SDK 1.5.0, changed source refresh to execute in background, and added AudioOnly publishing.
+- Upgraded to new SDK 1.5.0.
 - Long running audio video processes such as refreshing the list of sources now run in the background.
   - Publish and Media settings views are updated after sources refresh.
 - AudioOnly mode allows publishing with only audio.
   - To activate or inactivate mode, simply toggle switch on Publish and Media settings views.
   - Devices with only audio source(s) and no video source will automatically be able to publish with only audio regardless of the state of this mode.
 ### Fixed
-- Now when trying to capture, it asks for camera and microphone permissions instead of crashing the app.
+- Fixed crash due to missing Android runtime permissions for accessing camera and microphone when capturing for the first time after installation.
+  - If in AudioOnly mode, only microphone permission is required.
 ### Known issues
 - As before.
 

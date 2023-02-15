@@ -1,6 +1,8 @@
 package com.millicast.android_app;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.content.pm.PackageManager;
 import android.util.Log;
@@ -12,13 +14,14 @@ import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.activity.result.contract.ActivityResultContracts;
+
+import java.util.ArrayList;
 
 import com.millicast.AudioTrack;
 import com.millicast.VideoRenderer;
@@ -38,7 +41,7 @@ import static com.millicast.android_app.Utils.makeSnackbar;
 public class PublishFragment extends Fragment {
     public static final String TAG = "PublishFragment";
 
-    private final MillicastManager mcMan;
+    private MillicastManager mcMan;
     private LinearLayout linearLayoutVideo;
     private LinearLayout linearLayoutCon;
     private TextView textViewPub;
@@ -61,19 +64,55 @@ public class PublishFragment extends Fragment {
     private boolean ascending = true;
     private boolean conVisible = true;
 
+    // Launch a dialog to ask for required permission(s).
     private final ActivityResultLauncher<String[]> cameraMicPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-                int cameraResult = result.get(Manifest.permission.CAMERA) ? PackageManager.PERMISSION_GRANTED : PackageManager.PERMISSION_DENIED;
+                String logTag = "[Perm][Result] ";
+                String log = "";
+                Boolean permGranted = false;
                 int audioResult = result.get(Manifest.permission.RECORD_AUDIO) ? PackageManager.PERMISSION_GRANTED : PackageManager.PERMISSION_DENIED;
-                if (cameraResult == PackageManager.PERMISSION_GRANTED && audioResult == PackageManager.PERMISSION_GRANTED) {
-                    // Permission is granted, continue with the code
-                    Log.d(TAG, "Camera and microphone access given.");
-                    onStartCaptureClickedApproved();
+                if (mcMan.isAudioOnly()) {
+                    log = "AudioOnly: ";
+                    if (audioResult == PackageManager.PERMISSION_GRANTED) {
+                        permGranted = true;
+                        log += "Permission granted.";
+                    } else {
+                        log += "Permission NOT granted!";
+                    }
                 } else {
-                    // Permission is not granted, show a pop-up message
-                    Log.d(TAG, "Failed to get camera and microphone access.");
-                    Toast.makeText(getContext(), "Camera and microphone permissions are required for publishing", Toast.LENGTH_LONG).show();
+                    log = "AudioVideo: ";
+                    int cameraResult = result.get(Manifest.permission.CAMERA) ? PackageManager.PERMISSION_GRANTED : PackageManager.PERMISSION_DENIED;
+                    if (audioResult == PackageManager.PERMISSION_GRANTED &&
+                            cameraResult == PackageManager.PERMISSION_GRANTED) {
+                        permGranted = true;
+                        log += "Permissions granted.";
+                    } else {
+                        log += "Permission(s) NOT granted!";
+                    }
                 }
+                logD(TAG, logTag + log);
+                if (permGranted) {
+                    // Permission is granted, continue with the code
+                    onStartCaptureClickedApproved();
+                    return;
+                }
+                // Warn user that permission(s) required to publish is/are still missing.
+                String msg = "Publishing can only start after microphone ";
+                if (!mcMan.isAudioOnly()) {
+                    msg += "and camera permissions have ";
+                } else {
+                    msg += "permission has ";
+                }
+                msg += "been given.\nIn order to publish, please allow the required permission at the next permission dialog or manually allow them at the device's Settings > Apps menu.";
+                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                builder.setMessage(msg);
+                builder.setNeutralButton("OK.", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                });
+                AlertDialog alertDialog = builder.create();
+                alertDialog.show();
             });
 
     public PublishFragment() {
@@ -258,18 +297,39 @@ public class PublishFragment extends Fragment {
 
     private void onStartCaptureClicked(View captureButton) {
         Log.d(TAG, "Start Capture clicked.");
-        // Check if camera and microphone permissions are already granted
-        if (!hasCameraAndMicrophonePermissions()) {
-            // Request camera and microphone permissions
-            cameraMicPermissionLauncher.launch(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO});
+        // Check if camera and microphone permissions are already granted.
+        if (!hasMediaPermissions()) {
+            // Request camera and/or microphone permissions
+            String[] permissions = {""};
+            ArrayList<String> permList = new ArrayList();
+            permList.add(Manifest.permission.RECORD_AUDIO);
+            if (!mcMan.isAudioOnly()) {
+                permList.add(Manifest.permission.CAMERA);
+            }
+            permissions = permList.toArray(permissions);
+            // Try to ask for the remaining required permission(s).
+            cameraMicPermissionLauncher.launch(permissions);
         } else {
+            // If permission(s) already granted, proceed to start capture.
             onStartCaptureClickedApproved();
         }
     }
 
-    private boolean hasCameraAndMicrophonePermissions() {
-        return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    /**
+     * Checks if all the required media permission(s) have been granted.
+     * If in {@link MillicastManager#audioOnly AudioOnly} mode, only the {@link Manifest.permission#RECORD_AUDIO} permission is needed.
+     * Otherwise, the {@link Manifest.permission#CAMERA} permission is also needed.
+     *
+     * @return
+     */
+    private boolean hasMediaPermissions() {
+        Boolean audioGranted = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        Boolean cameraGranted = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        if (mcMan.isAudioOnly()) {
+            return audioGranted;
+        } else {
+            return audioGranted && cameraGranted;
+        }
     }
 
     private void onStartCaptureClickedApproved() {
