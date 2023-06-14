@@ -255,7 +255,7 @@ public class SubscribeFragment extends Fragment {
             visibility = View.GONE;
         }
         linearLayoutCon.setVisibility(visibility);
-        mcMan.applyScaling(true);
+        mcMan.applyScaling(false);
     }
 
     private void toggleAscend(CompoundButton buttonView, boolean isChecked) {

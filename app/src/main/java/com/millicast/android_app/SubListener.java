@@ -52,7 +52,13 @@ public class SubListener implements Subscriber.Listener {
     }
 
     @Override
-    public void onConnectionError(String reason) {
+    public void onDisconnected() {
+        String logTag = logTagClass + "[Con][On][X] ";
+        makeSnackbar(logTag, "Disconnected", mcMan.getFragmentSub());
+    }
+
+    @Override
+    public void onConnectionError(int status, String reason) {
         String logTag = logTagClass + "[Con][Error] ";
         mcMan.setSubState(MCStates.SubscriberState.DISCONNECTED);
         setUI();

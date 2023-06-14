@@ -247,6 +247,10 @@ public class MillicastManager {
         // Set Logger
         Logger.setLoggerListener((String msg, LogLevel level) -> {
             String logTag = "[SDK][Log][L:" + level + "] ";
+            LogLevel minLevel = LogLevel.MC_LOG;
+            if(level.ordinal() > minLevel.ordinal()){
+                return;
+            }
             logD(TAG, logTag + msg);
         });
         // Prepare Media
@@ -1721,27 +1725,16 @@ public class MillicastManager {
         boolean success = stopPubMc();
 
         if (success) {
-            logD(TAG, logTag + "Publish stopped.");
-            setPubState(PublisherState.CONNECTED);
+            logD(TAG, logTag + "Publish stopped and we have disconnected.");
+            setPubState(PublisherState.DISCONNECTED);
         } else {
             logD(TAG, logTag + "Failed! Stop publishing requirements not fulfilled. Check current states and any Millicast error message.");
             return;
         }
 
         enableStatsPub(0);
-        logD(TAG, logTag + "Stats stopped. Trying to disconnect...");
-
-        // Disconnect Publisher
-        success = disconnectPubMc();
-
-        if (success) {
-            logD(TAG, logTag + "Disconnected.");
-            setPubState(PublisherState.DISCONNECTED);
-        } else {
-            logD(TAG, logTag + "Failed! Disconnect requirements not fulfilled. Check current states and any Millicast error message.");
-            return;
-        }
-
+        logD(TAG, logTag + "Stats stopped");
+        
         // Remove Publisher.
         publisher = null;
         logD(TAG, logTag + "Publisher removed.");
@@ -1838,26 +1831,15 @@ public class MillicastManager {
         boolean success = stopSubMc();
 
         if (success) {
-            logD(TAG, logTag + "Subscribe stopped.");
-            setSubState(SubscriberState.CONNECTED);
+            logD(TAG, logTag + "Subscribe stopped and we have disconnected.");
+            setSubState(SubscriberState.DISCONNECTED);
         } else {
             logD(TAG, logTag + "Failed! Stop subscribing requirements not fulfilled. Check current states and any Millicast error message.");
             return;
         }
 
         enableStatsSub(0);
-        logD(TAG, logTag + "Stats stopped. Trying to disconnect...");
-
-        // Disconnect Subscriber
-        success = disconnectSubMc();
-
-        if (success) {
-            logD(TAG, logTag + "Disconnected.");
-            setSubState(SubscriberState.DISCONNECTED);
-        } else {
-            logD(TAG, logTag + "Failed! Disconnect requirements not fulfilled. Check current states and any Millicast error message.");
-            return;
-        }
+        logD(TAG, logTag + "Stats stopped.");
 
         // Remove Subscriber.
         subscriber = null;
@@ -3874,31 +3856,6 @@ public class MillicastManager {
     }
 
     /**
-     * Millicast methods to disconnect Publisher from Millicast.
-     */
-    private boolean disconnectPubMc() {
-        String logTag = "[Pub][Con][X][Mc] ";
-
-        // Disconnect from Millicast.
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            publisher.disconnect();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
-        if (success) {
-            logD(TAG, logTag + "OK. Disconnecting from Millicast.");
-        } else {
-            logD(TAG, error);
-        }
-        return success;
-    }
-
-    /**
      * Millicast methods to connect to Millicast for subscribing.
      * Subscribing credentials required.
      * If connecting requirements are met, will return true and trigger SDK to start connecting to Millicast. Otherwise, will return false.
@@ -3942,32 +3899,7 @@ public class MillicastManager {
         return success;
     }
 
-    /**
-     * Millicast methods to disconnect Subscriber from Millicast.
-     */
-    private boolean disconnectSubMc() {
-        String logTag = "[Sub][Con][X][Mc] ";
-
-        // Disconnect from Millicast.
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            subscriber.disconnect();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
-        if (success) {
-            logD(TAG, logTag + "OK. Disconnecting from Millicast.");
-        } else {
-            logD(TAG, error);
-        }
-        return success;
-    }
-
-    //**********************************************************************************************
+//**********************************************************************************************
     // Publish
     //**********************************************************************************************
 
@@ -4047,20 +3979,11 @@ public class MillicastManager {
         logD(TAG, logTag + "Options set in Publisher.");
 
         // Publish to Millicast
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            publisher.publish();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
+        boolean success = publisher.publish();
         if (success) {
             logD(TAG, logTag + "OK. Starting publish to Millicast.");
         } else {
-            logD(TAG, error);
+            logD(TAG, logTag + "Failed! Check current states and any Millicast error message.");
         }
         return success;
     }
@@ -4072,20 +3995,11 @@ public class MillicastManager {
         String logTag = "[Pub][Stop][Mc] ";
 
         // Stop publishing to Millicast.
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            publisher.unpublish();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
+        boolean success = publisher.unpublish();
         if (success) {
             logD(TAG, logTag + "OK. Stopped publishing to Millicast.");
         } else {
-            logD(TAG, error);
+            logD(TAG, logTag + "Failed!");
         }
         return success;
     }
@@ -4155,20 +4069,11 @@ public class MillicastManager {
         logD(TAG, logTag + "Options set.");
 
         // Subscribe to Millicast
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            subscriber.subscribe();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
+        boolean success = subscriber.subscribe();
         if (success) {
             logD(TAG, logTag + "OK. Starting subscribe to Millicast.");
         } else {
-            logD(TAG, error);
+            logD(TAG, logTag + "Failed! Check current states and any Millicast error message.");
         }
         return success;
     }
@@ -4180,20 +4085,11 @@ public class MillicastManager {
         String logTag = "[Sub][Stop][Mc] ";
 
         // Stop subscribing to Millicast.
-        boolean success = true;
-        String error = logTag + "Failed!";
-        try {
-            subscriber.unsubscribe();
-        } catch (Exception e) {
-            success = false;
-            error += " Error: " + e.getLocalizedMessage();
-            logD(TAG, error);
-        }
-
+        boolean success = subscriber.unsubscribe();
         if (success) {
             logD(TAG, logTag + "OK. Stopped subscribing to Millicast.");
         } else {
-            logD(TAG, error);
+            logD(TAG, logTag + "Failed!");
         }
         return success;
     }

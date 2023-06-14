@@ -48,7 +48,13 @@ public class PubListener implements Publisher.Listener {
     }
 
     @Override
-    public void onConnectionError(String reason) {
+    public void onDisconnected() {
+        String logTag = logTagClass + "[Con][On][X] ";
+        makeSnackbar(logTag, "Disconnected", mcMan.getFragmentPub());
+    }
+
+    @Override
+    public void onConnectionError(int status, String reason) {
         String logTag = logTagClass + "[Con][Error] ";
         mcMan.setPubState(DISCONNECTED);
         setUI();
