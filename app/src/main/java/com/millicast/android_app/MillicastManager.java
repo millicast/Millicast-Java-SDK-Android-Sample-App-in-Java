@@ -97,6 +97,7 @@ public class MillicastManager {
     private boolean videoEnabledSub = false;
     private boolean ndiOutputVideo = false;
     private boolean ndiOutputAudio = false;
+    private boolean recordingEnabledPub = true;
 
     // States: Ricoh Theta only states.
     private boolean isRicohTheta = false;
@@ -988,6 +989,22 @@ public class MillicastManager {
     }
 
     /**
+     * Sets RecordingEnabled for the publisher.
+     * If set to true, the recording will start as soon as the stream is published.
+     * If called after publish(), will enable recording of the active stream
+     * @param recordingEnabled
+     */
+    public void setRecordingEnabled(boolean recordingEnabled){
+        if(this.isPublishing()){
+            if(recordingEnabled){
+                publisher.recording.record();
+            }
+            else publisher.recording.unrecord();
+        }
+        this.recordingEnabledPub = recordingEnabled;
+    }
+
+    /**
      * Start capturing both audio and video (based on selected videoSource) if currently not capturing and no media sources refresh is on going.
      *
      * @return True if able to proceed to start audio video capture, false otherwise.
@@ -1453,10 +1470,6 @@ public class MillicastManager {
 
         BitrateSettings settings = optionPub.bitrateSettings;
         switch (type) {
-            case START:
-                logTag += "[Start] ";
-                settings.startBitrateKbps = Optional.of(bitrate);
-                break;
             case MIN:
                 logTag += "[Min] ";
                 settings.minBitrateKbps = Optional.of(bitrate);
@@ -1655,6 +1668,7 @@ public class MillicastManager {
         }
     }
 
+
     //**********************************************************************************************
     // Publish
     //**********************************************************************************************
@@ -1663,6 +1677,7 @@ public class MillicastManager {
      * Publish audio and video tracks that are already captured.
      * Must first be connected to Millicast.
      */
+
     public void startPub() {
         String logTag = "[Pub][Start] ";
         if (publisher == null) {
@@ -1693,6 +1708,8 @@ public class MillicastManager {
 
         // Publish to Millicast
         logD(TAG, logTag + "Trying...");
+
+        setRecordingEventHandlers();
         boolean success = startPubMc();
 
         if (success) {
@@ -1739,6 +1756,25 @@ public class MillicastManager {
         publisher = null;
         logD(TAG, logTag + "Publisher removed.");
         logD(TAG, logTag + "OK.");
+    }
+
+    private void setRecordingEventHandlers(){
+        String logTag = "[Pub][Rec] ";
+
+        publisher.recording.onRecordingStarted(() -> {
+            logD(TAG, logTag + "Recording started.");
+        });
+        publisher.recording.onRecordingStopped(() -> {
+            logD(TAG, logTag + "Recording stopped.");
+        });
+        publisher.recording.onFailedToStartRecording(() -> {
+            logD(TAG, logTag + "Failed to start recording.");
+        });
+        publisher.recording.onFailedToStopRecording(() -> {
+            logD(TAG, logTag + "Failed to stop recording.");
+        });
+
+
     }
 
     public PublishFragment getFragmentPub() {
@@ -3965,12 +4001,12 @@ public class MillicastManager {
         // Set Publisher Options
         Optional sourceIdPub = getOptSourceIdPub(CURRENT);
         optionPub.sourceId = sourceIdPub;
+        optionPub.recordStream = this.recordingEnabledPub;
         logD(TAG, logTag + "SourceId (" + sourceIdPub + ") set in Option.");
 
         setCodecs();
         logD(TAG, logTag + "Preferred codecs set in Option.");
 
-        setBitrate(300, MCTypes.Bitrate.START);
         setBitrate(0, MCTypes.Bitrate.MIN);
         setBitrate(2500, MCTypes.Bitrate.MAX);
         logD(TAG, logTag + "Preferred bitrates set in Option.");
@@ -4157,6 +4193,10 @@ public class MillicastManager {
             name = cap.width + "x" + cap.height + " fps:" + cap.fps / 1000;
         }
         return name;
+    }
+
+    public boolean isRecordingEnabledPub(){
+        return recordingEnabledPub;
     }
 
 }

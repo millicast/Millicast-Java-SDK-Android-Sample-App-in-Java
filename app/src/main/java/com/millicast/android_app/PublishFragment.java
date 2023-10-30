@@ -60,6 +60,7 @@ public class PublishFragment extends Fragment {
     private Button buttonAudioCodec;
     private Button buttonVideoCodec;
     private Button buttonPublish;
+    private Button buttonRecording;
 
     private boolean ascending = true;
     private boolean conVisible = true;
@@ -166,6 +167,7 @@ public class PublishFragment extends Fragment {
         buttonAudioCodec = view.findViewById(R.id.buttonCodecAudio);
         buttonVideoCodec = view.findViewById(R.id.buttonCodecVideo);
         buttonPublish = view.findViewById(R.id.buttonPublish);
+        buttonRecording = view.findViewById(R.id.button_recording_pub);
 
         // Set actions
         linearLayoutVideo.setOnClickListener(this::toggleCon);
@@ -173,6 +175,7 @@ public class PublishFragment extends Fragment {
         switchDirection.setChecked(ascending);
         switchAudioOnly.setOnCheckedChangeListener(this::toggleAudioOnly);
         switchAudioOnly.setChecked(mcMan.isAudioOnly());
+        buttonRecording.setOnClickListener(this::toggleRecordingEnabled);
         buttonRefresh.setOnClickListener(this::refreshMediaSources);
         buttonAudioSrc.setOnClickListener(this::toggleAudioSrc);
         buttonVideoSrc.setOnClickListener(this::toggleVideoSrc);
@@ -287,6 +290,18 @@ public class PublishFragment extends Fragment {
             mcMan.setAudioOnly(false);
         }
         setUI();
+    }
+
+    private void toggleRecordingEnabled(View view){
+        if(mcMan.isRecordingEnabledPub()){
+            mcMan.setRecordingEnabled(false);
+            buttonRecording.setText("Recording:F");
+        }
+        else{
+            mcMan.setRecordingEnabled(true);
+            buttonRecording.setText("Recording:T");
+        }
+
     }
 
     private void refreshMediaSources(View view) {
