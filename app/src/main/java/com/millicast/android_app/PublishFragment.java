@@ -294,12 +294,15 @@ public class PublishFragment extends Fragment {
 
     private void toggleRecordingEnabled(View view){
         if(mcMan.isRecordingEnabledPub()){
-            mcMan.setRecordingEnabled(false);
-            buttonRecording.setText("Recording:F");
+            if(mcMan.setRecordingEnabled(false)){
+                buttonRecording.setText("Recording:F");
+            };
+
         }
         else{
-            mcMan.setRecordingEnabled(true);
-            buttonRecording.setText("Recording:T");
+            if(mcMan.setRecordingEnabled(true)) {
+                buttonRecording.setText("Recording:T");
+            }
         }
 
     }

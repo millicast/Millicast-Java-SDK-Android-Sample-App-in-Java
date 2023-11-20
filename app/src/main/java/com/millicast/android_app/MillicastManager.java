@@ -994,14 +994,19 @@ public class MillicastManager {
      * If called after publish(), will enable recording of the active stream
      * @param recordingEnabled
      */
-    public void setRecordingEnabled(boolean recordingEnabled){
+    public boolean setRecordingEnabled(boolean recordingEnabled){
         if(this.isPublishing()){
             if(recordingEnabled){
-                publisher.recording.record();
+                this.recordingEnabledPub = publisher.recording.record();
             }
-            else publisher.recording.unrecord();
+            else {
+                this.recordingEnabledPub = publisher.recording.unrecord();
+            }
         }
-        this.recordingEnabledPub = recordingEnabled;
+        else {
+            this.recordingEnabledPub = recordingEnabled;
+        }
+        return this.recordingEnabledPub;
     }
 
     /**
