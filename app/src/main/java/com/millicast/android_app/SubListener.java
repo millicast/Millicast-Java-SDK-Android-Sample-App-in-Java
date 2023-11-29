@@ -82,6 +82,17 @@ public class SubListener implements Subscriber.Listener {
         String logTag = logTagClass + "[Stat] ";
         String log = statsReport.toString();
         logD(TAG, log, logTag);
+        statsReport.getStatsMap().forEach((key,stat) -> {
+            if (stat.getType().equals("codec")){
+                String[] codec = stat.getMembers().get("mimeType").toString().split("/");
+                ArrayList<String> codecs = mcMan.getCodecList(codec[0].equals("audio"));
+                if (!codecs.contains(codec[1])){
+                    makeSnackbar(logTag, "Unsupported codec: "+codec[1],mcMan.getFragmentSub());
+                }
+            }
+        });
+
+
     }
 
     @Override
