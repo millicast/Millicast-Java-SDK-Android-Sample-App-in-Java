@@ -97,7 +97,7 @@ public class MillicastManager {
     private boolean videoEnabledSub = false;
     private boolean ndiOutputVideo = false;
     private boolean ndiOutputAudio = false;
-    private boolean recordingEnabledPub = true;
+    private boolean recordingEnabledPub = false;
 
     // States: Ricoh Theta only states.
     private boolean isRicohTheta = false;
@@ -4006,7 +4006,7 @@ public class MillicastManager {
         // Set Publisher Options
         Optional sourceIdPub = getOptSourceIdPub(CURRENT);
         optionPub.sourceId = sourceIdPub;
-        optionPub.recordStream = this.recordingEnabledPub;
+        optionPub.recordStream =  Optional.of(this.recordingEnabledPub);
         logD(TAG, logTag + "SourceId (" + sourceIdPub + ") set in Option.");
 
         setCodecs();
