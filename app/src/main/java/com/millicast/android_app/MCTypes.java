@@ -11,10 +11,6 @@ public class MCTypes {
      */
     public enum Bitrate {
         /**
-         * {@link com.millicast.BitrateSettings#startBitrateKbps}
-         */
-        START,
-        /**
          * {@link com.millicast.BitrateSettings#minBitrateKbps}
          */
         MIN,

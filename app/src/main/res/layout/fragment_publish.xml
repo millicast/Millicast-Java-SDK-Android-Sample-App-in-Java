@@ -113,14 +113,28 @@
                     android:autoSizeTextType="uniform"
                     android:text="Res" />
 
-                <Button
-                    android:id="@+id/buttonCapture"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
+                    android:layout_height="match_parent"
                     android:layout_weight="0.25"
-                    android:autoSizeTextType="uniform"
-                    android:text="@string/startCapture" />
+                    android:orientation="vertical">
+
+                    <Button
+                        android:id="@+id/buttonCapture"
+                        android:layout_width="match_parent"
+                        android:layout_height="137dp"
+                        android:layout_gravity="center"
+                        android:layout_weight="1"
+                        android:autoSizeTextType="uniform"
+                        android:text="@string/startCapture" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="5"
+                        android:orientation="vertical"/>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -167,6 +181,14 @@
                     android:layout_weight="0.25"
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteVideo" />
+
+                <Button
+                    android:id="@+id/button_recording_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:text="Recording:F"
+                    android:textSize="8sp" />
 
             </LinearLayout>
 

@@ -168,6 +168,14 @@
                     android:autoSizeTextType="uniform"
                     android:text="@string/muteVideo" />
 
+                <Button
+                    android:id="@+id/button_recording_pub"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:text="Recording:F"
+                    android:textSize="8sp" />
+
             </LinearLayout>
 
             <LinearLayout
