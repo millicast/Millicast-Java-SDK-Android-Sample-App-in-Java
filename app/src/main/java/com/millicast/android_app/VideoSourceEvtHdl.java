@@ -2,7 +2,8 @@ package com.millicast.android_app;
 
 import android.os.Handler;
 
-import com.millicast.VideoSource;
+import com.millicast.devices.source.video.VideoSource;
+import com.millicast.devices.type.EventsHandler;
 
 import static com.millicast.android_app.MCStates.*;
 import static com.millicast.android_app.MCTypes.Source.CURRENT;
@@ -13,7 +14,7 @@ import static com.millicast.android_app.Utils.makeSnackbar;
  * Implementation of VideoSource's event listener.
  * This handles camera events that allows us to know the outcome and details of camera operations.
  */
-class VideoSourceEvtHdl implements VideoSource.EventsHandler {
+class VideoSourceEvtHdl implements EventsHandler {
     public static final String TAG = "VidSrcEvtHdl";
 
     private MillicastManager mcMan;

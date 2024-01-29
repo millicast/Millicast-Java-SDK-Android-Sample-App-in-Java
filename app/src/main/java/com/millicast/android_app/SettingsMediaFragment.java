@@ -18,9 +18,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.millicast.AudioSource;
-import com.millicast.VideoCapabilities;
-import com.millicast.VideoSource;
+import com.millicast.devices.source.audio.AudioSource;
+import com.millicast.devices.source.video.VideoCapabilities;
+import com.millicast.devices.source.video.VideoSource;
 
 import java.util.ArrayList;
 

@@ -18,10 +18,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import com.millicast.AudioTrack;
-import com.millicast.LayerData;
+import com.millicast.devices.track.AudioTrack;
 import com.millicast.VideoRenderer;
-import com.millicast.VideoTrack;
+import com.millicast.devices.track.VideoTrack;
+import com.millicast.subscribers.state.LayerData;
 
 import org.webrtc.RendererCommon;
 
@@ -34,6 +34,7 @@ import static com.millicast.android_app.Utils.populateSpinner;
 
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * UI for subscribing.
@@ -411,46 +412,46 @@ public class SubscribeFragment extends Fragment {
 
         populateSpinner(spinnerList, spinner, lambda, mcMan.getContext(), (int position) -> {
             String logTagSet = "[View][Layer][Spinner][Set] ";
-            String logSet;
+            AtomicReference<String> logSet = new AtomicReference<>();
             String layerId = spinnerList.get(position);
-            logSet = "Selected Pos: " + position + " LayerId:" + layerId + ".";
+            logSet.set("Selected Pos: " + position + " LayerId:" + layerId + ".");
             logD(TAG, logTagSet + logSet);
 
             // Select the layer and if not possible
-            if (!mcMan.selectLayer(layerId)) {
+            mcMan.selectLayer(layerId)
+                    .then(success -> {
+                        logD(TAG, logTagSet + "OK");
+                    })
+                    .error(e -> {
+                        // Reset to currently selected layerId if possible.
+                        logSet.set("Failed! Resetting to currently selected layerId...");
+                        logD(TAG, logTagSet + logSet);
 
-                // Reset to currently selected layerId if possible.
-                logSet = "Failed! Resetting to currently selected layerId...";
-                logD(TAG, logTagSet + logSet);
+                        int previousIndex = lambda.getSelectedIndex(spinnerList);
+                        if (previousIndex >= 0) {
+                            String resetSelection = spinnerList.get(previousIndex);
+                            spinner.setSelection(previousIndex);
+                            logSet.set("OK. Spinner reset to:" + resetSelection + ".");
+                            logD(TAG, logTagSet + logSet);
+                            return;
+                        }
 
-                int previousIndex = lambda.getSelectedIndex(spinnerList);
-                if (previousIndex >= 0) {
-                    String resetSelection = spinnerList.get(previousIndex);
-                    spinner.setSelection(previousIndex);
-                    logSet = "OK. Spinner reset to:" + resetSelection + ".";
-                    logD(TAG, logTagSet + logSet);
-                    return;
-                }
+                        // Otherwise reset to automatic selection.
+                        logSet.set("Failed! Resetting to automatic selection...");
+                        logD(TAG, logTagSet + logSet);
 
-                // Otherwise reset to automatic selection.
-                logSet = "Failed! Resetting to automatic selection...";
-                logD(TAG, logTagSet + logSet);
-
-                String resetLayerId = "";
-                mcMan.selectLayer("");
-                int resetIndex = spinnerList.indexOf(resetLayerId);
-                if (resetIndex > 0) {
-                    spinner.setSelection(resetIndex);
-                    logSet = "OK. Spinner reset to index:" + resetLayerId + ".";
-                } else {
-                    logSet = "Failed! Unable to find index of resetLayerId(" + resetLayerId +
-                            ") as it is not in the current spinnerList:" + spinnerList + ".";
-                }
-                logD(TAG, logTagSet + logSet);
-            } else {
-                logSet = "OK.";
-                logD(TAG, logTagSet + logSet);
-            }
+                        String resetLayerId = "";
+                        mcMan.selectLayer("");
+                        int resetIndex = spinnerList.indexOf(resetLayerId);
+                        if (resetIndex > 0) {
+                            spinner.setSelection(resetIndex);
+                            logSet.set("OK. Spinner reset to index:" + resetLayerId + ".");
+                        } else {
+                            logSet.set("Failed! Unable to find index of resetLayerId(" + resetLayerId +
+                                    ") as it is not in the current spinnerList:" + spinnerList + ".");
+                        }
+                        logD(TAG, logTagSet + logSet);
+                    });
         });
     }
 

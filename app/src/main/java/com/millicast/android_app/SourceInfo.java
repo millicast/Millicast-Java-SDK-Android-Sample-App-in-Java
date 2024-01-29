@@ -5,8 +5,9 @@ import static com.millicast.android_app.Utils.logD;
 
 import androidx.annotation.NonNull;
 
-import com.millicast.LayerData;
 import com.millicast.Subscriber;
+import com.millicast.subscribers.ProjectionData;
+import com.millicast.subscribers.state.LayerData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,14 +81,14 @@ public class SourceInfo {
     }
 
     /**
-     * Get an ArrayList of {@link com.millicast.Subscriber.ProjectionData} for all the
+     * Get an ArrayList of {@link ProjectionData} for all the
      * audio or video tracks of this MediaInfo.
      *
      * @param mid      The mid onto which this source is requested to be projected onto.
      * @param forAudio
      * @return
      */
-    public ArrayList<Subscriber.ProjectionData> getProjectionData(String mid, boolean forAudio) {
+    public ArrayList<ProjectionData> getProjectionData(String mid, boolean forAudio) {
         String[] trackList = trackIdAudioList;
         String mediaType = "audio";
 
@@ -96,7 +97,7 @@ public class SourceInfo {
             mediaType = "video";
         }
 
-        ArrayList<Subscriber.ProjectionData> result = null;
+        ArrayList<ProjectionData> result = null;
         if (trackList == null || trackList.length < 1) {
             return result;
         }
@@ -104,11 +105,8 @@ public class SourceInfo {
         result = new ArrayList<>();
 
         for (String trackId : trackList) {
-            Subscriber.ProjectionData data = new Subscriber.ProjectionData();
-            data.trackId = trackId;
-            data.media = mediaType;
-            data.mid = mid;
-
+            ProjectionData data = new ProjectionData(trackId,mediaType,mid,null);
+            //data.copy(trackId,mediaType,mid,null);
             result.add(data);
         }
 
@@ -347,19 +345,16 @@ public class SourceInfo {
             name += "N.A.";
             return name;
         }
-
-        name += ld.encodingId;
-        String temStr = "" + ld.temporalLayerId;
-        String spaStr = "" + ld.spatialLayerId;
+        name += ld.getEncodingId();
+        String temStr = "" + ld.getTemporalLayerId();
+        String spaStr = "" + ld.getSpatialLayerId();
         if (longForm) {
             String maxTemLayer = "-";
-            if (ld.maxTemporalLayerId.isPresent()) {
-                maxTemLayer = "" + ld.maxTemporalLayerId.get();
-            }
+            maxTemLayer = "" + ld.getMaxTemporalLayerId();
+
             String maxSpaLayer = "-";
-            if (ld.maxSpatialLayerId.isPresent()) {
-                maxSpaLayer = "" + ld.maxSpatialLayerId.get();
-            }
+
+            maxSpaLayer = "" + ld.getMaxSpatialLayerId();
             temStr += "/" + maxTemLayer;
             spaStr += "/" + maxSpaLayer;
         }
