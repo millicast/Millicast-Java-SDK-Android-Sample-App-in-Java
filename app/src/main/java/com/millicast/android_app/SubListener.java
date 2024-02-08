@@ -1,13 +1,20 @@
 package com.millicast.android_app;
 
-import com.millicast.AudioTrack;
-import com.millicast.LayerData;
+import com.millicast.clients.stats.Codecs;
+import com.millicast.clients.stats.InboundRtpStream;
+import com.millicast.clients.stats.OutboundRtpStream;
+import com.millicast.clients.stats.RtsReport;
+import com.millicast.clients.stats.VideoSource;
+import com.millicast.devices.track.AudioTrack;
 import com.millicast.Subscriber;
-import com.millicast.VideoTrack;
+import com.millicast.devices.track.VideoTrack;
+import com.millicast.subscribers.SubscriberListener;
+import com.millicast.subscribers.state.LayerData;
 
 import org.webrtc.RTCStatsReport;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Optional;
 
 import static com.millicast.android_app.MCStates.SubscriberState.CONNECTED;
@@ -15,11 +22,13 @@ import static com.millicast.android_app.MCStates.SubscriberState.SUBSCRIBING;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
+import androidx.annotation.NonNull;
+
 /**
  * Implementation of Subscriber's Listener.
  * This handles events sent to the Subscriber being listened to.
  */
-public class SubListener implements Subscriber.Listener {
+public class SubListener implements SubscriberListener {
     public static final String TAG = "SubListener";
 
     private final MillicastManager mcMan;
@@ -48,6 +57,7 @@ public class SubListener implements Subscriber.Listener {
         String logTag = logTagClass + "[Con][On] ";
         mcMan.setSubState(CONNECTED);
         makeSnackbar(logTag, "Connected", mcMan.getFragmentSub());
+        mcMan.getFragmentSub().setUI();
         mcMan.startSub();
     }
 
@@ -69,6 +79,11 @@ public class SubListener implements Subscriber.Listener {
     public void onStopped() {
         String logTag = logTagClass + "[Stop] ";
         logD(TAG, logTag + "OK.");
+        logD(TAG, logTag + "Subscribe stopped and we have disconnected.");
+        mcMan.setSubState(MCStates.SubscriberState.DISCONNECTED);
+        setUI();
+        makeSnackbar(logTag, "Subscriber Stopped", mcMan.getFragmentSub());
+
     }
 
     @Override
@@ -77,21 +92,41 @@ public class SubListener implements Subscriber.Listener {
         makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentSub());
     }
 
+
+
     @Override
-    public void onStatsReport(RTCStatsReport statsReport) {
+    public void onStatsReport(@NonNull RtsReport rtsReport) {
         String logTag = logTagClass + "[Stat] ";
-        String log = statsReport.toString();
-        logD(TAG, log, logTag);
-        statsReport.getStatsMap().forEach((key,stat) -> {
-            if (stat.getType().equals("codec")){
-                String[] codec = stat.getMembers().get("mimeType").toString().split("/");
-                ArrayList<String> codecs = mcMan.getCodecList(codec[0].equals("audio"));
-                if (!codecs.contains(codec[1])){
-                    makeSnackbar(logTag, "Unsupported codec: "+codec[1],mcMan.getFragmentSub());
+        StringBuilder log =  new StringBuilder();
+        rtsReport.stats().forEach(stat -> {
+            switch (stat.statsType()){
+                case CODEC -> {
+                    var codecs = (Codecs)stat;
+                    log.append("[CODEC] " + codecs.getMimeType());
+                    if(((Codecs) stat).getMimeType().startsWith("video")){
+                        try{
+                            String videoCodec = codecs.getMimeType().split("/")[1];
+                            var supportedCodecs = mcMan.getCodecList(false);
+                            if (!supportedCodecs.contains(videoCodec)){
+                                makeSnackbar(TAG, "Unsupported Video Codec: "+videoCodec, mcMan.getFragmentSub());
+                            }
+                        }catch (Exception e){}
+                    }
+
+                }
+                case INBOUND_RTP -> {
+                    log.append("[INBOUND_RTP] " + "FPS :" + ((InboundRtpStream)stat).getFramesPerSecond());
+                }
+                case OUTBOUND_RTP -> {
+                    log.append("[OUTBOUND_RTP] " + "FPS :"+ ((OutboundRtpStream)stat).getFramesPerSecond());
+                }
+                case VIDEO_SOURCE -> {
+                    log.append("[VIDEO_SOURCE] " + "FPS :"+ ((VideoSource)stat).getFramesPerSecond());
                 }
             }
-        });
 
+        });
+        logD(TAG, log.toString(), logTag);
 
     }
 
@@ -202,16 +237,17 @@ public class SubListener implements Subscriber.Listener {
      * @param inactiveLayers inactive simulcast/SVC layers
      */
     @Override
-    public void onLayers(String mid, LayerData[] activeLayers, LayerData[] inactiveLayers) {
+    public void onLayers(String mid, LayerData[] activeLayers, String[] inactiveLayers) {
         String logTag = logTagClass + "[Layer] ";
         String log = "mid:" + mid + " Active(" + activeLayers.length + "):[" +
                 SourceInfo.getLayerListStr(activeLayers) + "]," +
                 " Inactive(" + inactiveLayers.length + "):[" +
-                SourceInfo.getLayerListStr(inactiveLayers) + "].";
+                Arrays.stream(inactiveLayers).sequential().reduce((a, b) -> a + " " + b) + "].";
 
         logD(TAG, logTag + log);
         mcMan.setLayerActiveList(activeLayers);
     }
+
 
     /**
      * Called when a source id is being multiplexed into the audio track based on the voice activity level.
@@ -254,5 +290,10 @@ public class SubListener implements Subscriber.Listener {
                 subscribeFragment.setUI();
             }
         });
+    }
+
+    @Override
+    public void onFrameMetadata(int i, int i1, @NonNull byte[] bytes) {
+
     }
 }

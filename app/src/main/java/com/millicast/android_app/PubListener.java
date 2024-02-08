@@ -1,6 +1,15 @@
 package com.millicast.android_app;
 
 import com.millicast.Publisher;
+import com.millicast.clients.stats.AudioSource;
+import com.millicast.clients.stats.Codecs;
+import com.millicast.clients.stats.InboundRtpStream;
+import com.millicast.clients.stats.OutboundRtpStream;
+import com.millicast.clients.stats.RemoteInboundRtpStream;
+import com.millicast.clients.stats.RemoteOutboundRtpStream;
+import com.millicast.clients.stats.RtsReport;
+import com.millicast.clients.stats.VideoSource;
+import com.millicast.publishers.listener.PublisherListener;
 
 import org.webrtc.RTCStatsReport;
 
@@ -10,11 +19,15 @@ import static com.millicast.android_app.MCStates.PublisherState.PUBLISHING;
 import static com.millicast.android_app.Utils.logD;
 import static com.millicast.android_app.Utils.makeSnackbar;
 
+import androidx.annotation.NonNull;
+
+import java.util.ArrayList;
+
 /**
  * Implementation of Publisher's Listener.
  * This handles events sent to the Publisher being listened to.
  */
-public class PubListener implements Publisher.Listener {
+public class PubListener implements PublisherListener {
     public static final String TAG = "PubListener";
 
     private MillicastManager mcMan;
@@ -50,6 +63,9 @@ public class PubListener implements Publisher.Listener {
     @Override
     public void onDisconnected() {
         String logTag = logTagClass + "[Con][On][X] ";
+        logD(TAG, logTag + "Publish stopped and we have disconnected.");
+        mcMan.setPubState(MCStates.PublisherState.DISCONNECTED);
+        mcMan.getFragmentPub().setUI();
         makeSnackbar(logTag, "Disconnected", mcMan.getFragmentPub());
     }
 
@@ -67,11 +83,29 @@ public class PubListener implements Publisher.Listener {
         makeSnackbar(logTag, "Signaling Error:" + s, mcMan.getFragmentPub());
     }
 
+
     @Override
-    public void onStatsReport(RTCStatsReport statsReport) {
-        String logTag = logTagClass + "[Stat] ";
-        String log = statsReport.toString();
-        logD(TAG, log, logTag);
+    public void onStatsReport(@NonNull RtsReport rtsReport) {
+        String logTag = logTagClass + "[Stat]";
+        StringBuilder log =  new StringBuilder();
+        rtsReport.stats().forEach(stat -> {
+            switch (stat.statsType()){
+                case CODEC -> {
+                    log.append("[CODEC] " + ((Codecs)stat).getMimeType());
+                }
+                case INBOUND_RTP -> {
+                    log.append("[INBOUND_RTP] " + "FPS :" + ((InboundRtpStream)stat).getFramesPerSecond());
+                }
+                case OUTBOUND_RTP -> {
+                    log.append("[OUTBOUND_RTP] " + "FPS :"+ ((OutboundRtpStream)stat).getFramesPerSecond());
+                }
+                case VIDEO_SOURCE -> {
+                    log.append("[VIDEO_SOURCE] " + "FPS :"+ ((VideoSource)stat).getFramesPerSecond());
+                }
+            }
+
+        });
+        logD(TAG, log.toString(), logTag);
     }
 
     @Override
@@ -107,4 +141,30 @@ public class PubListener implements Publisher.Listener {
         });
     }
 
+    @Override
+    public void onTransformableFrame(int i, int i1, @NonNull ArrayList<Byte> arrayList) {
+
+    }
+
+    public void onRecordingStarted(){
+        logD(TAG, "[Rec][Start]", "Started recording");
+        mcMan.setRecordingEnabled(true);
+        mcMan.getFragmentPub().setUI();
+    }
+
+    public void onRecordingStopped(){
+        logD(TAG, "[Rec][Stop]", "Stopped recording");
+        mcMan.setRecordingEnabled(false);
+        mcMan.getFragmentPub().setUI();
+
+    }
+
+    public void onFailedToStartRecording(){
+        logD(TAG, "[Rec][Start]"+"Failed to start recording");
+    }
+
+    public void onFailedToStopRecording(){
+        logD(TAG, "[Rec][Stop]", "Failed to stop recording");
+
+    }
 }

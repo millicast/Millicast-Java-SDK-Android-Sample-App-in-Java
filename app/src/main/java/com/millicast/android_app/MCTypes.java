@@ -7,15 +7,15 @@ public class MCTypes {
 
 
     /**
-     * The type of {@link com.millicast.BitrateSettings} referred to.
+     * The type of {@link com.millicast.publishers.BitrateSettings} referred to.
      */
     public enum Bitrate {
         /**
-         * {@link com.millicast.BitrateSettings#minBitrateKbps}
+         * {@link com.millicast.publishers.BitrateSettings#minBitrateKbps}
          */
         MIN,
         /**
-         * {@link com.millicast.BitrateSettings#maxBitrateKbps}
+         * {@link com.millicast.publishers.BitrateSettings#maxBitrateKbps}
          */
         MAX;
     }

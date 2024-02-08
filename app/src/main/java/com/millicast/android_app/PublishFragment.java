@@ -23,9 +23,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import java.util.ArrayList;
 
-import com.millicast.AudioTrack;
 import com.millicast.VideoRenderer;
-import com.millicast.VideoTrack;
+import com.millicast.devices.track.AudioTrack;
+import com.millicast.devices.track.VideoTrack;
 
 import org.webrtc.RendererCommon;
 
@@ -293,17 +293,8 @@ public class PublishFragment extends Fragment {
     }
 
     private void toggleRecordingEnabled(View view){
-        if(mcMan.isRecordingEnabledPub()){
-            if(mcMan.setRecordingEnabled(false)){
-                buttonRecording.setText("Recording:F");
-            };
-
-        }
-        else{
-            if(mcMan.setRecordingEnabled(true)) {
-                buttonRecording.setText("Recording:T");
-            }
-        }
+        logD(TAG, "[Rec]", "Toggling recording...");
+        mcMan.toggleRecordingEnabled();
 
     }
 
@@ -477,6 +468,7 @@ public class PublishFragment extends Fragment {
 
     private void onStopPublishClicked(View view) {
         Log.d(TAG, "Stop Publish clicked.");
+
         mcMan.stopPub();
         setUI();
     }
@@ -668,6 +660,14 @@ public class PublishFragment extends Fragment {
                 buttonPublish.setEnabled(true);
                 break;
         }
+
+        if(mcMan.isRecordingEnabledPub()){
+            buttonRecording.setText("Recording: ON");
+        }
+        else{
+            buttonRecording.setText("Recording: OFF");
+        }
+
         setMuteButtons(true);
     }
 
