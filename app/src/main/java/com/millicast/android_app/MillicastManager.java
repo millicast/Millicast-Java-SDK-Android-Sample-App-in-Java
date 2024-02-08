@@ -1178,9 +1178,8 @@ public class MillicastManager {
         // If currently subscribing, do not set new audioSourceIndex.
         if (isSubscribing()) {
             logD(TAG, logTag + "NOT setting to " + newValue + " as currently subscribing.");
-            //TODO implement this
-            logD(TAG, logTag + "AudioPlayback:" + "IMPLEMENT THIS");
-            //getAudioSourceStr(audioPlayback.toString(), true));
+            logD(TAG, logTag + "AudioPlayback:" + "");
+            getAudioPlaybackStr(audioPlayback, true);
             return false;
         }
 
@@ -1412,7 +1411,6 @@ public class MillicastManager {
             logD(TAG, logTag + "Flag: " + ndiEnabled + ", Track: Does not exist.");
             return ndiEnabled;
         }
-        //TODO reimplement this
         return ndiEnabled;
     }
 
@@ -1738,26 +1736,27 @@ public class MillicastManager {
 
         publisher.isConnected()
                 .then(connected -> {
-                    if (connected) {
-                        publisher.isPublishing()
-                                .then(publishing -> {
-                                    if (publishing) {
-                                        logD(TAG, logTag + "Not publishing as we are already publishing!");
-                                    } else {
-                                        if (!isAudioVideoCaptured()) {
-                                            logD(TAG, logTag + "Failed! Both audio & video are not captured.");
-                                        } else {
-                                            logD(TAG, logTag + "Trying...");
-                                            startPubMc();
-                                        }
-                                    }
-                                })
-                                .error(e -> {
-                                    logD(TAG, logTag + e.getLocalizedMessage());
-                                });
-                    } else {
-//TODO CLEAN THIS UP
+                    if (!connected) {
+                        logD(TAG, logTag + "Not publishing as we are not connected!");
+                        return;
                     }
+                    publisher.isPublishing()
+                            .then(publishing -> {
+                                if (publishing) {
+                                    logD(TAG, logTag + "Not publishing as we are already publishing!");
+                                    return;
+                                }
+                                if (!isAudioVideoCaptured()) {
+                                    logD(TAG, logTag + "Failed! Both audio & video are not captured.");
+                                    return;
+                                }
+                                logD(TAG, logTag + "Trying...");
+                                startPubMc();
+                            })
+                            .error(e -> {
+                                logD(TAG, logTag + e.getLocalizedMessage());
+                            });
+
                 }).error(e -> {
                     logD(TAG, logTag + e.getLocalizedMessage());
                 });
@@ -2395,7 +2394,7 @@ public class MillicastManager {
      * @return
      */
 
-    //TODO clean this up
+    //TODO clean up
 //    public boolean addMediaTrack(boolean isAudio) {
 //        TrackType kind = TrackType.Audio;
 //        if (!isAudio) {

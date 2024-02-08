@@ -29,7 +29,6 @@ class SubscriberCompat(subscriberListener: SubscriberListener) : CompatBase() {
     fun connect() =  promise {
         stateChange();
         activityChange()
-        layersChange()
         onTrack();
         onLayers();
         onVad();
@@ -87,12 +86,6 @@ class SubscriberCompat(subscriberListener: SubscriberListener) : CompatBase() {
     }
     }
 
-    fun layersChange() = scope.launch {
-        subscriber.layers.distinctUntilChanged().collect{
-            newLayers ->
-                listener.onLayers(newLayers.mid,newLayers.activeLayers,newLayers.inactiveLayersEncodingIds)
-        }
-    }
 
     private fun onTrack() = scope.launch {
             subscriber.track.collect() { holder ->
